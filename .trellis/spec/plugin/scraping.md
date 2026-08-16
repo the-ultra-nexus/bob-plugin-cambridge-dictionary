@@ -79,6 +79,9 @@ Every def-block contributes **at most 2 examples** (`MAX_EXAMPLES_PER_DEF = 2` i
 - `not.html` — 1 POS, 4 CN-translated ordinary blocks + 3 phrase panels (`(if not)`/`(or not)`/`(humorous)`); CN summary has 4 lines, panels have no CN at all on the live page.
 - `dig.html` — online snapshot: 7 dsense groups (verb 4 + noun 3) + verb idioms (4) + phrasal verbs (6) between verb and noun groups.
 - `wet.html` — online snapshot: 3 POS; **idioms split per POS** (`a wet weekend`, `be wet behind the ears` under adjective; `wet your whistle` under verb [ T ]) — regression guard for cross-POS merging.
+- `plug-in.html` — zhs bilingual `plug-in` entry (v1.0.7 resolution target for `plugin`): headword + CN `（计算机程序的）…`.
+- `dig-idiom.html` — zhs bilingual canonical page for the idiom `dig (deep) into your pocket(s)/resources/savings` (direct canonical URL shape, no `?q=`): headword + CN `掏腰包…`.
+- `en-plug-in.html` — EN dictionary `plug-in` entry (from the `plugin` redirect). EN pages are only ever parsed for `.headword` extraction in the resolution stage; their embedded CN is a truncated preview and must never be used as output.
 
 ## Anti-Patterns
 

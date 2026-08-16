@@ -1,0 +1,5 @@
+{"file": ".trellis/spec/plugin/index.md", "reason": "Plugin 层总览与规则"}
+{"file": ".trellis/spec/plugin/error-handling.md", "reason": "completion 恰好一次、先判错再解析、notFound 路径核对"}
+{"file": ".trellis/spec/plugin/architecture.md", "reason": "文件所有权、禁改 src/helper、main() 语义保持"}
+{"file": ".trellis/spec/plugin/scraping.md", "reason": "fixtures 回归与选择器不变性"}
+{"file": ".trellis/tasks/08-17-fix-idioand-plugin-lookup/design.md", "reason": "按设计验收（请求次数≤3、降级单层、防重入）"}

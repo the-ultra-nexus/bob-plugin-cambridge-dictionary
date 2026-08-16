@@ -1,0 +1,6 @@
+{"file": ".trellis/spec/plugin/index.md", "reason": "Plugin 层总览：运行面、文件所有权、数据流"}
+{"file": ".trellis/spec/plugin/error-handling.md", "reason": "查询守卫、completion 协议、handler 已知缺陷（本任务修复点 R4）"}
+{"file": ".trellis/spec/plugin/architecture.md", "reason": "数据流与 URL 构造基线、『不改 src/helper』边界"}
+{"file": ".trellis/spec/plugin/scraping.md", "reason": "选择器与 fixtures 回归基线（main() 输出不得变）"}
+{"file": ".trellis/spec/plugin/build-release.md", "reason": "版本提升与构建/发布流程（patch 1.0.7）"}
+{"file": ".trellis/tasks/08-17-fix-idioand-plugin-lookup/design.md", "reason": "本任务技术设计：buildSlug/降级链/URL 常量/已验证的剑桥行为"}

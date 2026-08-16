@@ -5,6 +5,19 @@ import { Part, Phonetic } from './helper/types';
 const baseUrl = 'https://dictionary.cambridge.org';
 // 每个释义块最多收集的例句数
 const MAX_EXAMPLES_PER_DEF = 2;
+// slug 清洗：空白归一 → 空格转 - → 非 [\w-] 字符（( ) / , ' . 等）转 - → 合并连续 - → 去首尾 -
+// 保留大小写（iPhone / eBay 等专有名词不被破坏）
+const buildSlug = (text: string): string =>
+    text.trim()
+        .split(/\s+/)
+        .join('-')
+        .replace(/[^\w-]+/g, '-')
+        .replace(/-+/g, '-')
+        .replace(/^-+|-+$/g, '');
+// zh-CN 双语入口（中文路径段保持字面量，architecture.md）
+const ZHS_PREFIX = 'https://dictionary.cambridge.org/zhs/%E8%AF%8D%E5%85%B8/%E8%8B%B1%E8%AF%AD-%E6%B1%89%E8%AF%AD-%E7%AE%80%E4%BD%93';
+// 英文站（变体解析入口：plugin→plug-in、近形短语 slug→canonical 词条页）
+const EN_PREFIX = 'https://dictionary.cambridge.org/dictionary/english';
 
 /**
  *
@@ -17,7 +30,8 @@ const MAX_EXAMPLES_PER_DEF = 2;
  * @param {*} completion
  */
 function translate(query, completion) {
-    if (query.detectFrom !== 'en' || !query.text || query.text.split(" ").length > 3) {
+    // 守卫：仅 en→zh-Hans；空文本；空格分隔 token > 8 拦截（多词短语/习语上限）
+    if (query.detectFrom !== 'en' || !query.text || query.text.trim().split(/\s+/).length > 8) {
         completion({
             error: {
                 type: 'notFound',
@@ -25,16 +39,18 @@ function translate(query, completion) {
         });
         return;
     }
-    let text = query.text.split(" ").join("-");
-    Bob.api.$http.get({
-        url: `https://dictionary.cambridge.org/zhs/%E8%AF%8D%E5%85%B8/%E8%8B%B1%E8%AF%AD-%E6%B1%89%E8%AF%AD-%E7%AE%80%E4%BD%93/${text}`,
-        handler: (res) => {
-            main(res.data, completion);
-            if (res.error) {
-                Bob.api.$log.error(`reserr: ${Object.keys(res)}`);
+    const slug = buildSlug(query.text);
+    // 清洗后为空或仍超长（句子级输入兜底）→ notFound，不发请求
+    if (!slug || slug.length > 64) {
+        completion({
+            error: {
+                type: 'notFound',
             }
-        }
-    });
+        });
+        return;
+    }
+    // 统一 en→zhs 双站管道：请求 1 英文站解析 canonical headword → 请求 2 双语站取完整内容
+    resolveHeadword(slug, completion);
 }
 const main = (file: any, completion) => {
     const $ = load(file);
@@ -262,6 +278,58 @@ const main = (file: any, completion) => {
     });
     Bob.api.$log.info(`res${JSON.stringify(res)}`);
 }
+
+// 页面是否含词条（与 main() 内部同一判定选择器 .headword）
+const hasHeadword = (file: any): boolean => !!load(file)('.headword').html();
+
+// 唯一请求封装：先查 res.error（网络错误 → log + notFound，绝不在错误响应上 load），
+// 再判 .headword 存在性（无词条页 → notFound）；通过后才交给 onParse。每条路径 completion 恰好一次。
+const lookup = (url: string, onParse: (file: any) => void, completion) => {
+    Bob.api.$http.get({
+        url,
+        handler: (res) => {
+            if (res.error) {
+                Bob.api.$log.error(`reserr: ${JSON.stringify(res.error)}`);
+                completion({
+                    error: {
+                        type: 'notFound',
+                    }
+                });
+                return;
+            }
+            if (!hasHeadword(res.data)) {
+                completion({
+                    error: {
+                        type: 'notFound',
+                    }
+                });
+                return;
+            }
+            onParse(res.data);
+        }
+    });
+};
+
+// 请求 1（英文站解析）：en 页只提取 .headword 文本（其内嵌中文为截断预览，不得作输出源），
+// buildSlug 得 canonical slug → 请求 2（zhs 双语站）→ main 解析 / notFound。无递归、无环，≤2 次请求。
+const resolveHeadword = (slug: string, completion) => {
+    lookup(`${EN_PREFIX}/${encodeURIComponent(slug)}`, (file) => {
+        const $ = load(file);
+        const canonicalSlug = buildSlug($('.headword').first().text());
+        // 病态页面防御：en 页 .headword 存在但文本为空 → notFound，绝不向 zhs 首页发请求
+        if (!canonicalSlug) {
+            completion({
+                error: {
+                    type: 'notFound',
+                }
+            });
+            return;
+        }
+        lookup(`${ZHS_PREFIX}/${encodeURIComponent(canonicalSlug)}`, (zhsFile) => {
+            main(zhsFile, completion);
+        }, completion);
+    }, completion);
+};
 
 const cache = new Bob.Cache();
 const INSTALL = "__INSTALLED";

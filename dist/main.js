@@ -17910,8 +17910,11 @@ var { root: root2 } = static_exports;
 // src/entry.ts
 var baseUrl = "https://dictionary.cambridge.org";
 var MAX_EXAMPLES_PER_DEF = 2;
+var buildSlug = (text3) => text3.trim().split(/\s+/).join("-").replace(/[^\w-]+/g, "-").replace(/-+/g, "-").replace(/^-+|-+$/g, "");
+var ZHS_PREFIX = "https://dictionary.cambridge.org/zhs/%E8%AF%8D%E5%85%B8/%E8%8B%B1%E8%AF%AD-%E6%B1%89%E8%AF%AD-%E7%AE%80%E4%BD%93";
+var EN_PREFIX = "https://dictionary.cambridge.org/dictionary/english";
 function translate(query, completion) {
-  if (query.detectFrom !== "en" || !query.text || query.text.split(" ").length > 3) {
+  if (query.detectFrom !== "en" || !query.text || query.text.trim().split(/\s+/).length > 8) {
     completion({
       error: {
         type: "notFound"
@@ -17919,16 +17922,16 @@ function translate(query, completion) {
     });
     return;
   }
-  let text3 = query.text.split(" ").join("-");
-  api.$http.get({
-    url: `https://dictionary.cambridge.org/zhs/%E8%AF%8D%E5%85%B8/%E8%8B%B1%E8%AF%AD-%E6%B1%89%E8%AF%AD-%E7%AE%80%E4%BD%93/${text3}`,
-    handler: (res) => {
-      main(res.data, completion);
-      if (res.error) {
-        api.$log.error(`reserr: ${Object.keys(res)}`);
+  const slug = buildSlug(query.text);
+  if (!slug || slug.length > 64) {
+    completion({
+      error: {
+        type: "notFound"
       }
-    }
-  });
+    });
+    return;
+  }
+  resolveHeadword(slug, completion);
 }
 var main = (file, completion) => {
   const $2 = load(file);
@@ -18113,6 +18116,49 @@ var main = (file, completion) => {
     result: res
   });
   api.$log.info(`res${JSON.stringify(res)}`);
+};
+var hasHeadword = (file) => !!load(file)(".headword").html();
+var lookup = (url, onParse, completion) => {
+  api.$http.get({
+    url,
+    handler: (res) => {
+      if (res.error) {
+        api.$log.error(`reserr: ${JSON.stringify(res.error)}`);
+        completion({
+          error: {
+            type: "notFound"
+          }
+        });
+        return;
+      }
+      if (!hasHeadword(res.data)) {
+        completion({
+          error: {
+            type: "notFound"
+          }
+        });
+        return;
+      }
+      onParse(res.data);
+    }
+  });
+};
+var resolveHeadword = (slug, completion) => {
+  lookup(`${EN_PREFIX}/${encodeURIComponent(slug)}`, (file) => {
+    const $2 = load(file);
+    const canonicalSlug = buildSlug($2(".headword").first().text());
+    if (!canonicalSlug) {
+      completion({
+        error: {
+          type: "notFound"
+        }
+      });
+      return;
+    }
+    lookup(`${ZHS_PREFIX}/${encodeURIComponent(canonicalSlug)}`, (zhsFile) => {
+      main(zhsFile, completion);
+    }, completion);
+  }, completion);
 };
 var cache = new Cache();
 var INSTALL = "__INSTALLED";
