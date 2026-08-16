@@ -37,20 +37,36 @@ Bob renders `phonetics → exchanges → additions` in fixed order, so nothing i
 - Inflections only: one per `.inf-group` (`{ name: <lab>, words: [<inf>] }`).
 - Idioms / phrasal verbs are **not** in exchanges: they would be pinned to the top of the card, but they must sit under their own part of speech (user requirement) — see additions.
 
-### additions (append order == page DOM order)
-1. **CN summary groups** (unshifted to the front so they appear right below exchanges): one per POS with ordinary-block CN translations, `name = <full POS title>`, value = one CN per line (deduped, order preserved). Phrase-panel CN (`(if not)`, `(dig someone in the ribs)`, `(digs)`…) is **excluded** from the summary and stays inline in its panel.
-2. **EN sense sections** after `cnGroups` (so overall order is summary → senses):
-   - With `.dsense_h`: one additions entry, `name = <h3 text>`.
-   - Without: merged into a single loose entry with empty name (`''`) to close the POS block.
-   - Ordinary blocks: `(phraseTitle)` / `<level+grammar>` + ` <usage>` / EN line / examples. CN line was **moved to the summary** — ordinary blocks no longer print `> CN`.
-   - Phrase-panel blocks keep their inline `> CN`.
-   - Blank-line rule: an ordinary plain block (`!phraseTitle && !lab`) gets a trailing blank line (level badges like `A1` / `B1` do not suppress it).
-3. **Idioms / phrasal verbs xrefs** inline in DOM position (per POS body): one additions entry `name = 习语` / `短语动词`, value = phrase names one per line prefixed with circled digits `① ② ③…` (unique line starts; the "no repeated prefix" requirement). Multiple same-name xrefs in one POS merge (docs merge only within the current POS — `slice(posStart)`, never across POS).
+### additions (built from `posData` array after the DOM loop)
+
+Each `.entry-body__el` is processed into a `posData` entry: `{ posLabel, cnMeanings[], lines[] }`.
+`posLabel` = pure POS name from `.posgram > .pos` (fallback `.anc-info-head > .pos`).
+`cnMeanings` = CN translations from ordinary def-blocks (deduped, for the summary line).
+`lines` = all detailed content lines (definitions, `> CN`, examples, idioms, phrasal verbs).
+
+After the loop, `additions` is assembled from `posData`:
+
+1. **POS summary** (if any POS has CN meanings): one entry, `name = ''`, value = one line per POS like `verb：挖，挖掘（土）；凿出，打（洞）`. Chinese meanings joined by `；`.
+2. **Separator**: one entry, `name = ''`, value = `************************************************************` (60 `*`).
+3. **Per-POS detailed sections**: for each POS, one additions entry with `name = <pure POS label>` (e.g. `verb`, `noun`, `adjective`, `adverb`, `phrasal verb`). Between POS sections, another `*` separator entry is inserted.
+
+### Detailed section content (within a POS addition)
+
+- **Definition blocks** (`.`): `(phraseTitle)` / `<level+grammar>` + ` <usage>` / EN line / `> CN` / `• examples`. All CN translations are shown in the detailed section with `> ` prefix (both ordinary and phrase-panel).
+- **Ordinary blocks** (`!phraseTitle && !lab`): get a trailing blank line.
+- **Phrase-panel blocks** (`(if not)`, `(dig someone in the ribs)`, `(digs)`…): CN is shown inline with `> ` prefix (same as ordinary blocks).
+- **dsense_h** guide-word titles are **not** shown in the output (used only for DOM grouping).
+- **Idioms / phrasal verbs**: added directly to the POS `lines` array with header `习语` / `短语动词` and `① ② ③…` numbered items. Multiple same-type xrefs in one POS are appended sequentially (numbering continues via `xrefSeq`).
+
+### CN summary behavior
+- CN from ordinary def-blocks goes to both the summary line (joined by `；`) and the detailed section (`> CN`).
+- CN from phrase-panel blocks goes only to the detailed section (`> CN`), not to the summary.
+- The summary line format is `<posLabel>：<cn1>；<cn2>`, using the pure POS name (`.posgram > .pos`), without grammar tags like `[T]` `[C]`.
 
 ### Fallbacks
 - No `.pos-body` (phrase entries): iterate `$('.dsense', el)` in document order.
 - No `.dsense` at all: treat the word's `.def-block`s as one loose group.
-- `posgram` empty on phrase entries: use `.anc-info-head > .pos` for the POS title and `(label || anc-text)` as fallback pronunciation data.
+- `posgram` empty on phrase entries: use `.anc-info-head > .pos` for the POS title.
 
 ## Example Cap
 

@@ -38,9 +38,25 @@ interface Addition { name: string; value: string }
 
 ### additions semantics (Bob renders `phonetics → exchanges → additions` in fixed order)
 
-- **CN summary** (unshifted first, so it renders directly below exchanges): one per part of speech, `name = <full POS title>` (e.g. `wet verb [ T ]`), `value` = one CN translation per line. Only ordinary def-block CN; phrase-panel CN stays inline and never enters the summary.
-- **EN sense sections**: `name = <dsense_h text>` (page-native group heading, `''` when the page has none), `value` = block rows (`(phraseTitle)` / level+grammar+usage / EN / examples, blank line after plain blocks).
-- **Idioms / phrasal verbs**: `name = '习语' | '短语动词'`, `value` = phrase names one per line, each prefixed with circled digits `① ② ③…` (unique line starts). Header + rows combine into one additions entry (Bob shows the `name` as the block title).
+Additions are grouped by part of speech (POS) with `*` separators:
+
+```
+[POS summary: one line per POS, CN meanings joined by ；]
+[************************************************************]
+[POS label as section header, detailed definitions, idioms, phrasal verbs]
+[************************************************************]  (if more than one POS)
+[next POS section]
+```
+
+- **POS summary** (first entry, `name = ''`): one line per POS, format `<posLabel>：<cn1>；<cn2>；<cn3>`. `posLabel` is the pure POS name (`.posgram > .pos`), without grammar tags like `[T]` `[C]`. CN meanings from ordinary def-blocks, deduped, joined by `；`.
+- **Separator** (second entry, `name = ''`): `************************************************************` (60 `*`).
+- **POS detailed sections** (subsequent entries, `name = <pure POS label>` e.g. `verb`, `noun`, `adjective`, `adverb`, `phrasal verb`): each contains all definitions, `> CN` lines, examples, and idioms/phrasal verbs for that POS. Between POS sections, another `*` separator entry is inserted.
+  - Definition blocks: level + grammar → EN definition → `> CN` → `• examples`
+  - Phrase panels: `(title)` → EN → `> CN` → `• examples`
+  - Idioms: `习语` header → `① item` / `② item` ...
+  - Phrasal verbs: `短语动词` header → `① item` / `② item` ...
+- No `dsense_h` guide-word titles are shown in the output (they are used only for DOM grouping).
+- No `{可点击}` / `{同上}` / `{按照；分割组合}` annotations appear in output.
 
 ### exchanges semantics
 

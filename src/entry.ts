@@ -71,41 +71,43 @@ const main = (file: any, completion) => {
         });
     });
 
-    // Bob 渲染约束：parts 的 means 会被拼接成单行显示，无法逐行排版。
-    // additions 逐条分行 + value 内换行有效（v3 已验证），因此：
-    // 每个词性一条 additions（name = 纯词性标签，统一无序号），
-    // value 内按释义块组织：{全局序号}. [词组标题] [用法标签] 英文释义 中文释义 + • 例句行。
+    // additions 按词性分组 + * 分隔：
+    //   [0] name=""    → POS 概要："verb：挖，挖掘（土）；凿出，打（洞）"
+    //   [1] name=""    → 分隔线："***"
+    //   [2] name="verb" → verb 详细区（等级/语法/EN/CN/例句/习语/短语动词）
+    //   [3] name=""    → 分隔线（多词性时）
+    //   [4] name="noun" → noun 详细区
     // 注意：def-block 可能嵌套在 phrase-block（词组区域）中（如 not 页的 if not / or not），
     // 词组标题取 .phrase-title；中文释义必须是 def-body 的直接子级 .trans
     // （用 children(.trans) 隔离，避免误取例句块的翻译文本）。
+    const SEPARATOR = '************************************************************';
     const additions: Array<{ name: string; value: string }> = [];
-    const cnGroups: Array<{ name: string; items: string[] }> = [];
+    // 收集每个词性的数据：纯词性标签 + 中文释义(概要) + 详细内容行
+    const posData: Array<{ posLabel: string; cnMeanings: string[]; lines: string[] }> = [];
     $('.entry-body__el').each((_, el) => {
-        // 词性总标题（页面词头+词性）：wet adjective / wet verb [ T ] / not adverb；
-        // 短语词条（posgram 空）取 anc-info-head 内的词性（break down phrasal verb）
-        const headerWord = $('.di-title .headword', el).first().text().replace(/\s+/g, ' ').trim() || word;
-        const posgramText = $('.posgram', el).first().text().replace(/\s+/g, ' ').trim();
-        const ancEl = $('.anc-info-head', el).first();
-        const ancPos = $('.pos', ancEl).text().replace(/\s+/g, ' ').trim();
-        const posTitle = posgramText
-            ? `${headerWord} ${posgramText}`
-            : ancPos
-                ? `${headerWord} ${ancPos}`
-                : headerWord;
-        // 词性（兜底用）：posgram；短语词条用 anc-info-head
-        const posRaw = ($('.posgram', el).text() || $('.anc-info-head', el).text()).replace(/\s+/g, ' ').trim();
-        // 还原页面位置：pos-body 内按 DOM 顺序遍历 dsense（分组标题取页面 dsense_h 原文，
-        // 如 "dig verb (MOVE SOIL)"）与习语/短语动词 xref 区（页面底栏，如 "习语\ndig your heels in"）。
-        // 无 dsense_h 的词条（not / build / iceberg）页面本身没有分组栏 → 标题留空，不拼造。
+        // 纯词性标签（不含语法标签如 [T] [C]）：.posgram > .pos
+        // 短语词条（posgram 空）取 anc-info-head 内的词性
+        const posLabel = $('.posgram .pos', el).first().text().replace(/\s+/g, ' ').trim()
+            || $('.anc-info-head .pos', el).first().text().replace(/\s+/g, ' ').trim();
+        if (!posLabel) {
+            return;
+        }
+        const cnMeanings: string[] = [];
+        const lines: string[] = [];
+
         let looseLines: string[] | null = null;
         const flushLoose = () => {
             if (looseLines && looseLines.length) {
-                additions.push({ name: '', value: looseLines.join('\n').replace(/\n+$/, '') });
+                lines.push(...looseLines);
+                // 末尾加空行保证与后续内容分隔
+                if (looseLines[looseLines.length - 1] !== '') {
+                    lines.push('');
+                }
             }
             looseLines = null;
         };
         const groupLines = (blocks: Cheerio<Element>): string[] => {
-            const lines: string[] = [];
+            const result: string[] = [];
             blocks.each((_, blockEl) => {
                 // 词组面板（if not / or not / dig someone in the ribs）标题 → (标题) 圆括号
                 const phraseTitle = $(blockEl).parents('.phrase-block').find('.phrase-title').first().text().replace(/\s+/g, ' ').trim();
@@ -121,20 +123,19 @@ const main = (file: any, completion) => {
                 const cn = $('.def-body', blockEl).children('.trans').first().text().replace(/\s+/g, ' ').trim();
                 // 逐行还原页面：词组标题 / 等级+语法 / 用法标签（仅标签时圆括号）/ 释义
                 if (phraseTitle) {
-                    lines.push(`(${phraseTitle})`);
+                    result.push(`(${phraseTitle})`);
                 }
                 if (segLine) {
-                    lines.push(lab ? `${segLine} ${lab}` : segLine);
+                    result.push(lab ? `${segLine} ${lab}` : segLine);
                 } else if (lab) {
-                    lines.push(`(${lab})`);
+                    result.push(`(${lab})`);
                 }
-                lines.push(en);
-                // 中文释义：普通块收进分组区（去重后统一展示），词组面板（圆括号式）的保留原位不加入分组
+                result.push(en);
+                // 中文释义：始终在详细区显示 > 前缀；普通块同时收集到概要
                 if (cn) {
-                    if (phraseTitle) {
-                        lines.push(`> ${cn}`);
-                    } else {
-                        cnWords.push(cn);
+                    result.push(`> ${cn}`);
+                    if (!phraseTitle) {
+                        cnMeanings.push(cn);
                     }
                 }
                 let exampleCnt = 0;
@@ -144,34 +145,27 @@ const main = (file: any, completion) => {
                     }
                     const enExample = $('.eg', exEl).text().replace(/\s+/g, ' ').trim();
                     const cnExample = $('.trans', exEl).first().text().replace(/\s+/g, ' ').trim();
-                    lines.push(cnExample ? `• ${enExample}  ${cnExample}` : `• ${enExample}`);
+                    result.push(cnExample ? `• ${enExample}  ${cnExample}` : `• ${enExample}`);
                     exampleCnt++;
                 });
                 if (isPlain) {
-                    lines.push('');
+                    result.push('');
                 }
             });
-            return lines;
+            return result;
         };
         const handleSense = (senseEl: AnyNode) => {
             const blocks = $('.def-block', senseEl);
             if (!blocks.length) {
                 return;
             }
-            const h3 = $('.dsense_h', senseEl).text().replace(/\s+/g, ' ').trim();
-            const lines = groupLines(blocks);
-            if (!lines.length) {
+            const blockLines = groupLines(blocks);
+            if (!blockLines.length) {
                 return;
             }
-            if (h3) {
-                flushLoose();
-                additions.push({ name: h3, value: lines.join('\n').replace(/\n+$/, '') });
-            } else {
-                (looseLines ??= []).push(...lines);
-            }
+            // dsense_h 标题不单独显示，内容直接追加到 looseLines
+            (looseLines ??= []).push(...blockLines);
         };
-        // 本词性段在 additions 中的起点（xref 收集合并只在本词性内查找）
-        const posStart = additions.length;
         // 该词性下 xref 区序号（习语/短语动词各自从①起，区标题不同避免混淆）
         const xrefSeq: Record<string, number> = { 习语: 0, 短语动词: 0 };
         const circle = ['①', '②', '③', '④', '⑤', '⑥', '⑦', '⑧', '⑨', '⑩', '⑪', '⑫', '⑬', '⑭', '⑮', '⑯', '⑰', '⑱', '⑲', '⑳'];
@@ -202,20 +196,15 @@ const main = (file: any, completion) => {
                     }
                     const name = isPhrasal ? '短语动词' : '习语';
                     const rows = numbered(name, items);
-                    // 同一词性可能有多个同区 xref（idioms / idiom），并入本词性段内最近一条同名段（序号接续）；
-                    // 限定 posStart 之后 —— 绝不跨词性合并（每个词性有各自的习语）
-                    const prev = [...additions].slice(posStart).reverse().find((a) => a.name === name);
-                    if (prev) {
-                        prev.value += '\n' + rows;
-                    } else {
-                        flushLoose();
-                        additions.push({ name, value: rows });
-                    }
+                    // 每个 xref 直接追加到 lines（带标题行），flushLoose 确保与前面释义块分隔
+                    flushLoose();
+                    lines.push(name);
+                    lines.push(rows);
+                    lines.push('');
                 }
             });
         };
-        const cnWords: string[] = [];
-        // 收集本词性下所有普通块的 cnWords 由 groupLines 填充（上面）
+        // 收集本词性下所有内容
         const posBody = $('.pos-body', el).first();
         if (posBody.length) {
             collect(posBody);
@@ -232,14 +221,28 @@ const main = (file: any, completion) => {
             }
         }
         flushLoose();
-        if (cnWords.length) {
-            // 词性级中文释义分组（普通块中释去重保序），先暂存，最后统一前置到 additions 开头
-            cnGroups.push({ name: posTitle, items: [...new Set(cnWords)] });
-        }
+        posData.push({ posLabel, cnMeanings: [...new Set(cnMeanings)], lines });
     });
-    // 中释分组区：放在 additions 最前 —— 即词形变化（exchanges）之后第一行
-    const cnGroupsFront = cnGroups.flatMap((g) => [{ name: g.name, value: g.items.join('\n') }]);
-    additions.unshift(...cnGroupsFront);
+    // 从 posData 构建 additions
+    if (posData.length > 0) {
+        // 1. 词性概要：每词性一行，格式 "posLabel：cn1；cn2"
+        const summaryLines = posData
+            .filter(p => p.cnMeanings.length > 0)
+            .map(p => `${p.posLabel}：${p.cnMeanings.join('；')}`);
+        if (summaryLines.length > 0) {
+            additions.push({ name: '', value: summaryLines.join('\n') });
+        }
+        // 2. 分隔线
+        additions.push({ name: '', value: SEPARATOR });
+        // 3. 每词性详细区
+        posData.forEach((p, i) => {
+            if (i > 0) {
+                additions.push({ name: '', value: SEPARATOR });
+            }
+            const value = p.lines.join('\n').replace(/\n+$/, '');
+            additions.push({ name: p.posLabel, value });
+        });
+    }
     const res = {
         from: 'en',
         to: 'zh-Hans',
