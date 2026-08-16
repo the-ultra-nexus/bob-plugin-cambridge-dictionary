@@ -44,13 +44,13 @@ After the loop, `additions` is assembled from `posData`:
 
 1. **Inflections line** (only when inflections exist): one entry, `name = ''`, value = `present participle digging | past tense and past participle dug` + trailing `\n`. Plain text (non-clickable).
 2. **POS summary**: one entry per POS with CN meanings, `name = <pure POS label>` (Bob renders non-empty name as **bold title** — this is the only native bolding; markdown `**` is NOT rendered by Bob). `value` = CN meanings joined by `；`. Last summary entry `value` ends with `\n` (blank line after summary).
-3. **Separator**: one entry, `name = ''`, value = 60 `=` characters.
+3. **Separator**: one entry, `name = ''`, value = leading `\n` + 60 `=` characters (the newline renders a blank line above the separator).
 4. **Per-POS detailed sections**: for each POS, one additions entry with `name = <pure POS label>` (e.g. `verb`, `noun`, `adjective`, `adverb`, `phrasal verb`). Between POS sections, another separator entry is inserted.
 
 ### Detailed section content (within a POS addition)
 
-- **Definition blocks**: `(phraseTitle)` / `<level+grammar>` + ` <usage>` / EN line / `> CN` / `• examples`. All CN translations are shown in the detailed section with `> ` prefix (exactly one space; both ordinary and phrase-panel).
-- **Ordinary blocks** (`!phraseTitle && !lab`): get a trailing blank line.
+- **Definition blocks**: `(phraseTitle)` / `<level+grammar>` + ` <usage>` / EN line / `> CN` / `    • examples` (examples indented with 4 spaces). All CN translations are shown in the detailed section with `> ` prefix (exactly one space; both ordinary and phrase-panel).
+- **Every def-block** ends with a trailing blank line (ordinary, phrase-panel `(if not)`, and labeled blocks alike) — blocks are always separated by one empty line.
 - **Phrase-panel blocks** (`(if not)`, `(dig someone in the ribs)`, `(digs)`…): CN is shown inline with `> ` prefix (same as ordinary blocks).
 - **dsense_h** guide-word titles are **not** shown in the output (used only for DOM grouping).
 - **Idioms / phrasal verbs**: appended directly to `lines` in DOM position with header `习语` / `短语动词` and `① ② ③…` numbered items (numbering restarts per POS per type via `xrefSeq`).
@@ -67,7 +67,7 @@ After the loop, `additions` is assembled from `posData`:
 
 ## Example Cap
 
-Every def-block contributes **at most 2 examples** (`MAX_EXAMPLES_PER_DEF = 2` in `src/entry.ts`), rendered as `• en  cn` lines. Keep the cap when refactoring the parse loop.
+Every def-block contributes **at most 2 examples** (`MAX_EXAMPLES_PER_DEF = 2` in `src/entry.ts`), rendered as `    • en  cn` lines (4-space indentation). Keep the cap when refactoring the parse loop.
 
 ## Fixtures for Offline Checks
 

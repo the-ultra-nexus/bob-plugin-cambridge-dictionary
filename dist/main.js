@@ -17958,7 +17958,7 @@ var main = (file, completion) => {
     });
   });
   const inflectionLine = inflections.join(" | ");
-  const SEPARATOR = "====================================================================";
+  const SEPARATOR = "\n" + "=".repeat(60);
   const posData = [];
   $2(".entry-body__el").each((_, el) => {
     const posLabel = $2(".posgram .pos", el).first().text().replace(/\s+/g, " ").trim() || $2(".anc-info-head .pos", el).first().text().replace(/\s+/g, " ").trim();
@@ -17985,7 +17985,6 @@ var main = (file, completion) => {
         const gram = $2(".def-info .gram", blockEl).text().replace(/\s+/g, " ").trim();
         const lab = $2(".def-info .lab", blockEl).text().replace(/\s+/g, " ").trim();
         const segLine = [lv, gram].filter(Boolean).join(" ");
-        const isPlain = !phraseTitle && !lab;
         const en = $2(".ddef_d", blockEl).text().replace(/\s+/g, " ").trim().replace(/\s*:$/, "");
         const cn = $2(".def-body", blockEl).children(".trans").first().text().replace(/\s+/g, " ").trim();
         if (phraseTitle) {
@@ -18010,12 +18009,10 @@ var main = (file, completion) => {
           }
           const enExample = $2(".eg", exEl).text().replace(/\s+/g, " ").trim();
           const cnExample = $2(".trans", exEl).first().text().replace(/\s+/g, " ").trim();
-          result.push(cnExample ? `\u2022 ${enExample}  ${cnExample}` : `\u2022 ${enExample}`);
+          result.push(cnExample ? `    \u2022 ${enExample}  ${cnExample}` : `    \u2022 ${enExample}`);
           exampleCnt++;
         });
-        if (isPlain) {
-          result.push("");
-        }
+        result.push("");
       });
       return result;
     };
@@ -18087,9 +18084,8 @@ var main = (file, completion) => {
       additions.push({ name: "", value: inflectionLine + "\n" });
     }
     const summaryEntries = posData.filter((p) => p.cnMeanings.length > 0);
-    summaryEntries.forEach((p, i) => {
-      const isLast = i === summaryEntries.length - 1;
-      additions.push({ name: p.posLabel, value: p.cnMeanings.join("\uFF1B") + (isLast ? "\n" : "") });
+    summaryEntries.forEach((p) => {
+      additions.push({ name: p.posLabel, value: p.cnMeanings.join("\uFF1B") });
     });
     additions.push({ name: "", value: SEPARATOR });
     posData.forEach((p, i) => {

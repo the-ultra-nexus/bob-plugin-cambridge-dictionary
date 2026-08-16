@@ -54,8 +54,8 @@ Additions are grouped by part of speech (POS) with separator lines:
 
 - **Inflections line** (first entry, `name = ''`, only when inflections exist): one plain-text line, e.g. `present participle digging | past tense and past participle dug`. Never in `exchanges` (Bob renders exchange words as tappable links; user requires non-clickable).
 - **POS summary**: one entry per POS with CN meanings, `name = <pure POS label>` (e.g. `verb`, `noun` — Bob renders the name as a **bold title**, this is how labels get bolded; markdown `**` is NOT supported by Bob). `value` = CN meanings joined by `；`. The last summary entry's `value` ends with a trailing newline (blank line after summary).
-- **Separator**: `name = ''`, `value` = 60 characters of `=` (user-chosen; previously `*`).
-- **POS detailed sections**: one entry per POS, `name = <pure POS label>`, `value` = all definitions (`level+grammar` → EN → `> CN` → `• examples`), phrase panels (`(title)` → EN → `> CN` → `• examples`), then 习语/短语动词 with `① ② …` numbered items inline. Between POS sections, a separator entry is inserted.
+- **Separator**: `name = ''`, `value` = `\n` + 60 `=` characters (leading newline gives the blank line above the separator; user-chosen `=`, previously `*`).
+- **POS detailed sections**: one entry per POS, `name = <pure POS label>`, `value` = all definitions (`level+grammar` → EN → `> CN` → `    • examples`), phrase panels (`(title)` → EN → `> CN` → `    • examples`), then 习语/短语动词 with `① ② …` numbered items inline. Every def-block ends with a blank line (including phrase panels). Between POS sections, a separator entry is inserted.
 - `dsense_h` guide-word titles are not shown (used only for DOM grouping).
 - No `{可点击}` / `{同上}` / `{按照；分割组合}` annotations appear in output.
 - CN lines always use `> ` prefix (exactly one space after `>`).

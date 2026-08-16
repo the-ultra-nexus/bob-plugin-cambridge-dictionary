@@ -79,7 +79,7 @@ const main = (file: any, completion) => {
     // 注意：def-block 可能嵌套在 phrase-block（词组区域）中（如 not 页的 if not / or not），
     // 词组标题取 .phrase-title；中文释义必须是 def-body 的直接子级 .trans
     // （用 children(.trans) 隔离，避免误取例句块的翻译文本）。
-    const SEPARATOR = '====================================================================';
+    const SEPARATOR = '\n' + '='.repeat(60);
     // 收集每个词性的数据：纯词性标签 + 中文释义(概要) + 详细内容行
     const posData: Array<{ posLabel: string; cnMeanings: string[]; lines: string[] }> = [];
     $('.entry-body__el').each((_, el) => {
@@ -114,8 +114,7 @@ const main = (file: any, completion) => {
                 const gram = $('.def-info .gram', blockEl).text().replace(/\s+/g, ' ').trim();
                 const lab = $('.def-info .lab', blockEl).text().replace(/\s+/g, ' ').trim();
                 const segLine = [lv, gram].filter(Boolean).join(' ');
-                // 空行规则：普通释义块（无词组标题 && 无用法标签）后空行；词组/标签块紧凑
-                const isPlain = !phraseTitle && !lab;
+                // 每块释义后空一行（含词组面板/标签块，用户要求块之间始终空行）
                 const en = $('.ddef_d', blockEl).text().replace(/\s+/g, ' ').trim().replace(/\s*:$/, '');
                 // 中文释义必须是 def-body 的直接子级 .trans，避免误取例句块的翻译
                 const cn = $('.def-body', blockEl).children('.trans').first().text().replace(/\s+/g, ' ').trim();
@@ -143,12 +142,10 @@ const main = (file: any, completion) => {
                     }
                     const enExample = $('.eg', exEl).text().replace(/\s+/g, ' ').trim();
                     const cnExample = $('.trans', exEl).first().text().replace(/\s+/g, ' ').trim();
-                    result.push(cnExample ? `• ${enExample}  ${cnExample}` : `• ${enExample}`);
+                    result.push(cnExample ? `    • ${enExample}  ${cnExample}` : `    • ${enExample}`);
                     exampleCnt++;
                 });
-                if (isPlain) {
-                    result.push('');
-                }
+                result.push('');
             });
             return result;
         };
@@ -227,12 +224,10 @@ const main = (file: any, completion) => {
         if (inflectionLine) {
             additions.push({ name: '', value: inflectionLine + '\n' });
         }
-        // 1. 词性汇总：每词性一条，name = 词性标签（Bob 原生渲染为加粗标题），
-        //    value = 中文释义（；拼接）。最后一条汇总 value 尾加空行（汇总结束空一行）
+        // 1. 词性汇总：每词性一条，name = 词性标签（Bob 原生渲染为加粗标题），value = 中文释义（；拼接）
         const summaryEntries = posData.filter(p => p.cnMeanings.length > 0);
-        summaryEntries.forEach((p, i) => {
-            const isLast = i === summaryEntries.length - 1;
-            additions.push({ name: p.posLabel, value: p.cnMeanings.join('；') + (isLast ? '\n' : '') });
+        summaryEntries.forEach((p) => {
+            additions.push({ name: p.posLabel, value: p.cnMeanings.join('；') });
         });
         // 2. 分隔线
         additions.push({ name: '', value: SEPARATOR });
