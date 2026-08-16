@@ -1,0 +1,3 @@
+{"_example": "Fill with {\"file\": \"<path>\", \"reason\": \"<why>\"}. Put spec/research files only — no code paths. Run `python3 .trellis/scripts/get_context.py --mode packages` to list available specs. Delete this line once real entries are added."}
+{"file": ".trellis/spec/plugin/scraping.md", "reason": "验证解析规则一致性"}
+{"file": ".trellis/spec/plugin/error-handling.md", "reason": "completion/notFound 约定"}
