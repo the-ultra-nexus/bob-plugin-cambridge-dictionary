@@ -26,15 +26,16 @@ interface Addition { name: string; value: string }
   toParagraphs: [word],          // identical today — keep as-is unless Bob UI behavior requires a change
   toDict: {
     phonetics,                  // Phonetic[] — us + uk entries
-    additions,                  // Addition[] — CN summary groups, EN sense sections, idiom/phrasal-verb sections
-    exchanges,                  // Exchange[] — word-form inflections only (+ tappable phrase words if placement tradeoff flips back)
+    additions,                  // Addition[] — POS summary + per-POS detailed sections
+    exchanges,                  // Exchange[] — word-form inflections only
+    relatedWordParts,           // RelatedWordPart[] — idioms and phrasal verbs (blue clickable)
     word
   },
   raw: ''
 }
 ```
 
-`parts` is **not** populated (all display content lives in `additions` + `exchanges`). `phonetics` order is `[us, uk]`.
+`parts` is **not** populated (all display content lives in `additions` + `exchanges` + `relatedWordParts`). `phonetics` order is `[us, uk]`.
 
 ### additions semantics (Bob renders `phonetics → exchanges → additions` in fixed order)
 
@@ -50,13 +51,17 @@ Additions are grouped by part of speech (POS) with `*` separators:
 
 - **POS summary** (first entry, `name = ''`): one line per POS, format `<posLabel>：<cn1>；<cn2>；<cn3>`. `posLabel` is the pure POS name (`.posgram > .pos`), without grammar tags like `[T]` `[C]`. CN meanings from ordinary def-blocks, deduped, joined by `；`.
 - **Separator** (second entry, `name = ''`): `************************************************************` (60 `*`).
-- **POS detailed sections** (subsequent entries, `name = <pure POS label>` e.g. `verb`, `noun`, `adjective`, `adverb`, `phrasal verb`): each contains all definitions, `> CN` lines, examples, and idioms/phrasal verbs for that POS. Between POS sections, another `*` separator entry is inserted.
+- **POS detailed sections** (subsequent entries, `name = <pure POS label>` e.g. `verb`, `noun`, `adjective`, `adverb`, `phrasal verb`): each contains all definitions, `> CN` lines, and examples. Between POS sections, another `*` separator entry is inserted.
   - Definition blocks: level + grammar → EN definition → `> CN` → `• examples`
   - Phrase panels: `(title)` → EN → `> CN` → `• examples`
-  - Idioms: `习语` header → `① item` / `② item` ...
-  - Phrasal verbs: `短语动词` header → `① item` / `② item` ...
-- No `dsense_h` guide-word titles are shown in the output (they are used only for DOM grouping).
+- No `dsense_h` guide-word titles, no idioms, no phrasal verbs in additions (they are moved to `relatedWordParts`).
 - No `{可点击}` / `{同上}` / `{按照；分割组合}` annotations appear in output.
+
+### relatedWordParts semantics (idioms and phrasal verbs, Bob renders after exchanges)
+
+- One entry per POS + xref type, `part = "<posLabel> 习语"` | `"<posLabel> 短语动词"`.
+- `words` = array of `{ word: "<phrase>" }` objects. `word` is rendered as blue clickable text (re-query).
+- Example: `{ part: "verb 习语", words: [{ word: "dig your heels in" }, { word: "dig your own grave" }] }`
 
 ### exchanges semantics
 

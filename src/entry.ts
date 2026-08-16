@@ -72,18 +72,19 @@ const main = (file: any, completion) => {
     });
 
     // additions 按词性分组 + * 分隔：
-    //   [0] name=""    → POS 概要："verb：挖，挖掘（土）；凿出，打（洞）"
+    //   [0] name=""    → POS 概要："verb.  挖，挖掘（土）；凿出，打（洞）"
     //   [1] name=""    → 分隔线："***"
-    //   [2] name="verb" → verb 详细区（等级/语法/EN/CN/例句/习语/短语动词）
+    //   [2] name="verb" → verb 详细区（等级/语法/EN/CN/例句）
     //   [3] name=""    → 分隔线（多词性时）
     //   [4] name="noun" → noun 详细区
+    // 习语/短语动词放在 relatedWordParts（蓝色可点击跳查）
     // 注意：def-block 可能嵌套在 phrase-block（词组区域）中（如 not 页的 if not / or not），
     // 词组标题取 .phrase-title；中文释义必须是 def-body 的直接子级 .trans
     // （用 children(.trans) 隔离，避免误取例句块的翻译文本）。
     const SEPARATOR = '************************************************************';
     const additions: Array<{ name: string; value: string }> = [];
     // 收集每个词性的数据：纯词性标签 + 中文释义(概要) + 详细内容行
-    const posData: Array<{ posLabel: string; cnMeanings: string[]; lines: string[] }> = [];
+    const posData: Array<{ posLabel: string; cnMeanings: string[]; lines: string[]; xrefs: Array<{ name: string; items: string[] }> }> = [];
     $('.entry-body__el').each((_, el) => {
         // 纯词性标签（不含语法标签如 [T] [C]）：.posgram > .pos
         // 短语词条（posgram 空）取 anc-info-head 内的词性
@@ -94,6 +95,7 @@ const main = (file: any, completion) => {
         }
         const cnMeanings: string[] = [];
         const lines: string[] = [];
+        const xrefs: Array<{ name: string; items: string[] }> = [];
 
         let looseLines: string[] | null = null;
         const flushLoose = () => {
@@ -166,24 +168,13 @@ const main = (file: any, completion) => {
             // dsense_h 标题不单独显示，内容直接追加到 looseLines
             (looseLines ??= []).push(...blockLines);
         };
-        // 该词性下 xref 区序号（习语/短语动词各自从①起，区标题不同避免混淆）
-        const xrefSeq: Record<string, number> = { 习语: 0, 短语动词: 0 };
-        const circle = ['①', '②', '③', '④', '⑤', '⑥', '⑦', '⑧', '⑨', '⑩', '⑪', '⑫', '⑬', '⑭', '⑮', '⑯', '⑰', '⑱', '⑲', '⑳'];
-        const numbered = (name: string, items: string[]): string => {
-            const rows: string[] = [];
-            for (const t of items) {
-                const i = xrefSeq[name]++;
-                rows.push(`${i < circle.length ? circle[i] : String(i + 1)} ${t}`);
-            }
-            return rows.join('\n');
-        };
         const collect = (root: Cheerio<AnyNode>) => {
             root.children().each((_, child) => {
                 const cls = $(child).attr('class') || '';
                 if (cls.includes('dsense')) {
                     handleSense(child);
                 } else if (/(^|\s)xref(\s|$)/.test(` ${cls} `)) {
-                    // 习语 / 短语动词：固定在词性下（DOM 原位），逐条分行 + 序号前缀；
+                    // 习语 / 短语动词：收集到 xrefs 用于 relatedWordParts（蓝色可点击）
                     // 排除 grammar（用法笔记）与 related_words（相关词语）区
                     const isIdiom = /idiom/.test(cls);
                     const isPhrasal = /phrasal_verbs/.test(cls);
@@ -195,12 +186,12 @@ const main = (file: any, completion) => {
                         return;
                     }
                     const name = isPhrasal ? '短语动词' : '习语';
-                    const rows = numbered(name, items);
-                    // 每个 xref 直接追加到 lines（带标题行），flushLoose 确保与前面释义块分隔
-                    flushLoose();
-                    lines.push(name);
-                    lines.push(rows);
-                    lines.push('');
+                    const existing = xrefs.find(x => x.name === name);
+                    if (existing) {
+                        existing.items.push(...items);
+                    } else {
+                        xrefs.push({ name, items: [...items] });
+                    }
                 }
             });
         };
@@ -221,14 +212,16 @@ const main = (file: any, completion) => {
             }
         }
         flushLoose();
-        posData.push({ posLabel, cnMeanings: [...new Set(cnMeanings)], lines });
+        posData.push({ posLabel, cnMeanings: [...new Set(cnMeanings)], lines, xrefs });
     });
     // 从 posData 构建 additions
+    // 同时构建 relatedWordParts（习语/短语动词，蓝色可点击跳查）
+    const relatedWordParts: Array<{ part: string; words: Array<{ word: string }> }> = [];
     if (posData.length > 0) {
         // 1. 词性概要：每词性一行，格式 "posLabel：cn1；cn2"
         const summaryLines = posData
             .filter(p => p.cnMeanings.length > 0)
-            .map(p => `${p.posLabel}：${p.cnMeanings.join('；')}`);
+            .map(p => `${p.posLabel}.  ${p.cnMeanings.join('；')}`);
         if (summaryLines.length > 0) {
             additions.push({ name: '', value: summaryLines.join('\n') });
         }
@@ -241,6 +234,13 @@ const main = (file: any, completion) => {
             }
             const value = p.lines.join('\n').replace(/\n+$/, '');
             additions.push({ name: p.posLabel, value });
+            // 收集该词性下的习语/短语动词到 relatedWordParts
+            for (const x of p.xrefs) {
+                relatedWordParts.push({
+                    part: `${p.posLabel} ${x.name}`,
+                    words: x.items.map(item => ({ word: item }))
+                });
+            }
         });
     }
     const res = {
@@ -253,6 +253,7 @@ const main = (file: any, completion) => {
             phonetics,
             additions,
             exchanges,
+            relatedWordParts,
             word: word
         },
         raw: '',

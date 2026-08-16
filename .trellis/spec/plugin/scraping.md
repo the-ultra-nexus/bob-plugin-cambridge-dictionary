@@ -49,19 +49,28 @@ After the loop, `additions` is assembled from `posData`:
 1. **POS summary** (if any POS has CN meanings): one entry, `name = ''`, value = one line per POS like `verb：挖，挖掘（土）；凿出，打（洞）`. Chinese meanings joined by `；`.
 2. **Separator**: one entry, `name = ''`, value = `************************************************************` (60 `*`).
 3. **Per-POS detailed sections**: for each POS, one additions entry with `name = <pure POS label>` (e.g. `verb`, `noun`, `adjective`, `adverb`, `phrasal verb`). Between POS sections, another `*` separator entry is inserted.
+4. **relatedWordParts**: for each POS with xrefs, one entry `{ part: "<posLabel> 习语" | "<posLabel> 短语动词", words: [{ word: "<phrase>" }, ...] }`. `word` is blue clickable (re-query).
 
 ### Detailed section content (within a POS addition)
 
-- **Definition blocks** (`.`): `(phraseTitle)` / `<level+grammar>` + ` <usage>` / EN line / `> CN` / `• examples`. All CN translations are shown in the detailed section with `> ` prefix (both ordinary and phrase-panel).
+- **Definition blocks**: `(phraseTitle)` / `<level+grammar>` + ` <usage>` / EN line / `> CN` / `• examples`. All CN translations are shown in the detailed section with `> ` prefix (both ordinary and phrase-panel).
 - **Ordinary blocks** (`!phraseTitle && !lab`): get a trailing blank line.
 - **Phrase-panel blocks** (`(if not)`, `(dig someone in the ribs)`, `(digs)`…): CN is shown inline with `> ` prefix (same as ordinary blocks).
 - **dsense_h** guide-word titles are **not** shown in the output (used only for DOM grouping).
-- **Idioms / phrasal verbs**: added directly to the POS `lines` array with header `习语` / `短语动词` and `① ② ③…` numbered items. Multiple same-type xrefs in one POS are appended sequentially (numbering continues via `xrefSeq`).
+- **Idioms / phrasal verbs**: NOT in additions. See `relatedWordParts` below.
 
 ### CN summary behavior
 - CN from ordinary def-blocks goes to both the summary line (joined by `；`) and the detailed section (`> CN`).
 - CN from phrase-panel blocks goes only to the detailed section (`> CN`), not to the summary.
-- The summary line format is `<posLabel>：<cn1>；<cn2>`, using the pure POS name (`.posgram > .pos`), without grammar tags like `[T]` `[C]`.
+- The summary line format is `<posLabel>.  <cn1>；<cn2>`, using the pure POS name (`.posgram > .pos`), without grammar tags like `[T]` `[C]`.
+
+### relatedWordParts (idioms and phrasal verbs)
+
+Built after the DOM loop from `posData[].xrefs`:
+- One entry per `{ posLabel, xrefName }` combination, e.g. `part: "verb 习语"`.
+- `words` = array of `{ word: "<phrase>" }`. Each `word` is rendered as blue clickable text (re-query).
+- Multiple same-type xrefs in one POS merge (items accumulated in `xrefs[]`).
+- No `① ②` numbering (Bob renders the list directly).
 
 ### Fallbacks
 - No `.pos-body` (phrase entries): iterate `$('.dsense', el)` in document order.
