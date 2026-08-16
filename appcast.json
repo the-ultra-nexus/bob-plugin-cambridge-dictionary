@@ -14,6 +14,13 @@
       "sha256": "d70f19f64e8b4c210702286ca3f2198f66bdb034a6abfd7b4b8e4133ffcf7300",
       "url": "https://cdn.jsdelivr.net/gh/the-ultra-nexus/bob-plugin-cambridge-dictionary@main/release/bob-plugin-cambridge-dictionary1.0.6.bobplugin",
       "minBobVersion": "0.8.0"
+    },
+    {
+      "version": "1.0.7",
+      "desc": "更新内容见: https://github.com/the-ultra-nexus/bob-plugin-cambridge-dictionary/releases",
+      "sha256": "d594abd170bc710a8c37f735e1cb73dfde4ecf212563e7a8206aec1846dbc4f5",
+      "url": "https://cdn.jsdelivr.net/gh/the-ultra-nexus/bob-plugin-cambridge-dictionary@main/release/bob-plugin-cambridge-dictionary1.0.7.bobplugin",
+      "minBobVersion": "0.8.0"
     }
   ]
 }
