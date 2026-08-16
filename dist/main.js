@@ -17930,103 +17930,191 @@ function translate(query, completion) {
     }
   });
 }
-var addMap = (map2, key, value) => {
-  if (map2.has(key)) {
-    map2.get(key)?.push(value);
-  } else {
-    map2.set(key, [value]);
-  }
-};
-var mapToParts = (map2) => {
-  const parts = [];
-  map2.forEach((value, key) => {
-    parts.push({
-      part: key,
-      means: value
-    });
-  });
-  return parts;
-};
 var main = (file, completion) => {
-  const pushPart = (parts, part, ...means) => {
-    if (means) {
-      parts.push({
-        part: part.trim(),
-        means: means.map((mean) => mean.trim())
-      });
-    }
-  };
   const $2 = load(file);
   const word = $2(".headword").first().text();
   const hasWord = $2(".headword").html();
   api.$log.info(`word: ${word}`);
-  let phonetics = [];
-  const partMap = /* @__PURE__ */ new Map();
-  if (hasWord) {
-    phonetics = [makePhonetic($2(".us .pron .ipa"), $2('.us [type="audio/mpeg"]'), "us"), makePhonetic($2(".uk .pron .ipa"), $2('.uk [type="audio/mpeg"]'), "uk")];
-    api.$log.info(`phonetics${JSON.stringify(phonetics)}`);
-    const parts = [];
-    $2(".entry-body__el").each((i, el) => {
-      const curPartSpeech = ($2(".posgram", el).text() || $2(".anc-info-head", el).text()).trim();
-      $2(".dsense", el).each((index2, element) => {
-        $2(".def-block", element).each((index3, element2) => {
-          const enExplanation = $2(".ddef_h", element2).text();
-          const cnExplanation = $2(".ddef_b", element2).children().first().text();
-          pushPart(parts, `${curPartSpeech}-\u82F1\u6587\u91CA\u4E49`, enExplanation);
-          pushPart(parts, `${curPartSpeech}-\u4E2D\u6587\u91CA\u4E49`, cnExplanation);
-          addMap(partMap, curPartSpeech, cnExplanation);
-          let exampleCnt = 0;
-          $2(".examp", element2).each((index4, element3) => {
-            if (exampleCnt >= MAX_EXAMPLES_PER_DEF) {
-              return;
-            }
-            const enExample = $2(".eg", element3).text();
-            const cnExample = $2(".eg", element3).next().text();
-            pushPart(parts, `\u4F8B\u53E5${exampleCnt + 1}`, `${enExample}
-${cnExample}`);
-            exampleCnt++;
-          });
-        });
-      });
-    });
-    api.$log.info(`parts${parts}`);
-    const res = {
-      from: "en",
-      to: "zh-Hans",
-      fromParagraphs: [
-        word
-      ],
-      toDict: {
-        phonetics,
-        additions: transformToAdditions(parts),
-        parts: mapToParts(partMap),
-        word
-      },
-      raw: "",
-      toParagraphs: [word]
-    };
-    completion({
-      result: res
-    });
-    api.$log.info(`res${res}`);
-  } else {
+  if (!hasWord) {
     completion({
       error: {
         type: "notFound"
       }
     });
+    return;
   }
+  const phonetics = [
+    makePhonetic($2(".us .pron .ipa"), $2('.us [type="audio/mpeg"]'), "us"),
+    makePhonetic($2(".uk .pron .ipa"), $2('.uk [type="audio/mpeg"]'), "uk")
+  ];
+  const exchanges = [];
+  $2(".entry-body__el").each((_, el) => {
+    $2(".irreg-infls .inf-group", el).each((_2, g) => {
+      const lab = $2(".lab", g).text().replace(/\s+/g, " ").trim();
+      const inf = $2(".inf", g).text().replace(/\s+/g, " ").trim();
+      if (lab && inf) {
+        exchanges.push({ name: lab, words: [inf] });
+      }
+    });
+  });
+  const additions = [];
+  const cnGroups = [];
+  $2(".entry-body__el").each((_, el) => {
+    const headerWord = $2(".di-title .headword", el).first().text().replace(/\s+/g, " ").trim() || word;
+    const posgramText = $2(".posgram", el).first().text().replace(/\s+/g, " ").trim();
+    const ancEl = $2(".anc-info-head", el).first();
+    const ancPos = $2(".pos", ancEl).text().replace(/\s+/g, " ").trim();
+    const posTitle = posgramText ? `${headerWord} ${posgramText}` : ancPos ? `${headerWord} ${ancPos}` : headerWord;
+    const posRaw = ($2(".posgram", el).text() || $2(".anc-info-head", el).text()).replace(/\s+/g, " ").trim();
+    let looseLines = null;
+    const flushLoose = () => {
+      if (looseLines && looseLines.length) {
+        additions.push({ name: "", value: looseLines.join("\n").replace(/\n+$/, "") });
+      }
+      looseLines = null;
+    };
+    const groupLines = (blocks) => {
+      const lines = [];
+      blocks.each((_2, blockEl) => {
+        const phraseTitle = $2(blockEl).parents(".phrase-block").find(".phrase-title").first().text().replace(/\s+/g, " ").trim();
+        const lv = $2(".def-info .epp-xref", blockEl).text().replace(/\s+/g, " ").trim();
+        const gram = $2(".def-info .gram", blockEl).text().replace(/\s+/g, " ").trim();
+        const lab = $2(".def-info .lab", blockEl).text().replace(/\s+/g, " ").trim();
+        const segLine = [lv, gram].filter(Boolean).join(" ");
+        const isPlain = !phraseTitle && !lab;
+        const en = $2(".ddef_d", blockEl).text().replace(/\s+/g, " ").trim().replace(/\s*:$/, "");
+        const cn = $2(".def-body", blockEl).children(".trans").first().text().replace(/\s+/g, " ").trim();
+        if (phraseTitle) {
+          lines.push(`(${phraseTitle})`);
+        }
+        if (segLine) {
+          lines.push(lab ? `${segLine} ${lab}` : segLine);
+        } else if (lab) {
+          lines.push(`(${lab})`);
+        }
+        lines.push(en);
+        if (cn) {
+          if (phraseTitle) {
+            lines.push(`> ${cn}`);
+          } else {
+            cnWords.push(cn);
+          }
+        }
+        let exampleCnt = 0;
+        $2(".examp", blockEl).each((_3, exEl) => {
+          if (exampleCnt >= MAX_EXAMPLES_PER_DEF) {
+            return;
+          }
+          const enExample = $2(".eg", exEl).text().replace(/\s+/g, " ").trim();
+          const cnExample = $2(".trans", exEl).first().text().replace(/\s+/g, " ").trim();
+          lines.push(cnExample ? `\u2022 ${enExample}  ${cnExample}` : `\u2022 ${enExample}`);
+          exampleCnt++;
+        });
+        if (isPlain) {
+          lines.push("");
+        }
+      });
+      return lines;
+    };
+    const handleSense = (senseEl) => {
+      const blocks = $2(".def-block", senseEl);
+      if (!blocks.length) {
+        return;
+      }
+      const h3 = $2(".dsense_h", senseEl).text().replace(/\s+/g, " ").trim();
+      const lines = groupLines(blocks);
+      if (!lines.length) {
+        return;
+      }
+      if (h3) {
+        flushLoose();
+        additions.push({ name: h3, value: lines.join("\n").replace(/\n+$/, "") });
+      } else {
+        (looseLines ??= []).push(...lines);
+      }
+    };
+    const posStart = additions.length;
+    const xrefSeq = { \u4E60\u8BED: 0, \u77ED\u8BED\u52A8\u8BCD: 0 };
+    const circle = ["\u2460", "\u2461", "\u2462", "\u2463", "\u2464", "\u2465", "\u2466", "\u2467", "\u2468", "\u2469", "\u246A", "\u246B", "\u246C", "\u246D", "\u246E", "\u246F", "\u2470", "\u2471", "\u2472", "\u2473"];
+    const numbered = (name, items2) => {
+      const rows = [];
+      for (const t of items2) {
+        const i = xrefSeq[name]++;
+        rows.push(`${i < circle.length ? circle[i] : String(i + 1)} ${t}`);
+      }
+      return rows.join("\n");
+    };
+    const collect = (root3) => {
+      root3.children().each((_2, child) => {
+        const cls = $2(child).attr("class") || "";
+        if (cls.includes("dsense")) {
+          handleSense(child);
+        } else if (/(^|\s)xref(\s|$)/.test(` ${cls} `)) {
+          const isIdiom = /idiom/.test(cls);
+          const isPhrasal = /phrasal_verbs/.test(cls);
+          if (!isIdiom && !isPhrasal) {
+            return;
+          }
+          const items2 = [...new Set($2(".x-h", child).map((_3, x) => $2(x).text().replace(/\s+/g, " ").trim()).get().filter(Boolean))];
+          if (!items2.length) {
+            return;
+          }
+          const name = isPhrasal ? "\u77ED\u8BED\u52A8\u8BCD" : "\u4E60\u8BED";
+          const rows = numbered(name, items2);
+          const prev2 = [...additions].slice(posStart).reverse().find((a) => a.name === name);
+          if (prev2) {
+            prev2.value += "\n" + rows;
+          } else {
+            flushLoose();
+            additions.push({ name, value: rows });
+          }
+        }
+      });
+    };
+    const cnWords = [];
+    const posBody = $2(".pos-body", el).first();
+    if (posBody.length) {
+      collect(posBody);
+    } else {
+      const senseEls = $2(".dsense", el);
+      if (senseEls.length) {
+        senseEls.each((_2, s) => handleSense(s));
+      } else {
+        const blocks = $2(".def-block", el);
+        if (blocks.length) {
+          (looseLines ??= []).push(...groupLines(blocks));
+        }
+      }
+    }
+    flushLoose();
+    if (cnWords.length) {
+      cnGroups.push({ name: posTitle, items: [...new Set(cnWords)] });
+    }
+  });
+  const cnGroupsFront = cnGroups.flatMap((g) => [{ name: g.name, value: g.items.join("\n") }]);
+  additions.unshift(...cnGroupsFront);
+  const res = {
+    from: "en",
+    to: "zh-Hans",
+    fromParagraphs: [
+      word
+    ],
+    toDict: {
+      phonetics,
+      additions,
+      exchanges,
+      word
+    },
+    raw: "",
+    toParagraphs: [word]
+  };
+  completion({
+    result: res
+  });
+  api.$log.info(`res${JSON.stringify(res)}`);
 };
 var cache = new Cache();
 var INSTALL = "__INSTALLED";
-var transformToAdditions = (parts) => {
-  return parts.map((part) => {
-    return {
-      name: part.part,
-      value: part.means.join(";")
-    };
-  });
-};
 var makePhonetic = ($textEl, $audioEl, type) => {
   const value = $textEl.first().text() ?? "";
   const audio = $audioEl.attr("src");
