@@ -1,0 +1,28 @@
+{
+  "id": "00-bootstrap-guidelines",
+  "name": "00-bootstrap-guidelines",
+  "title": "Bootstrap Guidelines",
+  "description": "Fill in project development guidelines for AI agents",
+  "status": "completed",
+  "dev_type": "docs",
+  "scope": null,
+  "package": null,
+  "priority": "P1",
+  "creator": "ultra-nexus",
+  "assignee": "ultra-nexus",
+  "createdAt": "2026-08-16",
+  "completedAt": "2026-08-16",
+  "branch": null,
+  "base_branch": null,
+  "worktree_path": null,
+  "commit": null,
+  "pr_url": null,
+  "subtasks": [],
+  "children": [],
+  "parent": null,
+  "relatedFiles": [
+    ".trellis/spec/plugin/"
+  ],
+  "notes": "Bootstrap spec 完成：frontend 模板改为 plugin 层（architecture/scraping/data-contract/error-handling/build-release），guides 改写。",
+  "meta": {}
+}
