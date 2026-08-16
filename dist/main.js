@@ -17958,7 +17958,7 @@ var main = (file, completion) => {
     });
   });
   const inflectionLine = inflections.join(" | ");
-  const SEPARATOR = "\n" + "=".repeat(60);
+  const EQUALS_LINE = "=".repeat(60);
   const posData = [];
   $2(".entry-body__el").each((_, el) => {
     const posLabel = $2(".posgram .pos", el).first().text().replace(/\s+/g, " ").trim() || $2(".anc-info-head .pos", el).first().text().replace(/\s+/g, " ").trim();
@@ -17997,7 +17997,7 @@ var main = (file, completion) => {
         }
         result.push(en);
         if (cn) {
-          result.push(`> ${cn}`);
+          result.push(`|${cn}`);
           if (!phraseTitle) {
             cnMeanings.push(cn);
           }
@@ -18081,19 +18081,17 @@ var main = (file, completion) => {
   const additions = [];
   if (posData.length > 0) {
     if (inflectionLine) {
-      additions.push({ name: "", value: inflectionLine + "\n" });
+      additions.push({ name: "", value: inflectionLine });
     }
     const summaryEntries = posData.filter((p) => p.cnMeanings.length > 0);
-    summaryEntries.forEach((p) => {
-      additions.push({ name: p.posLabel, value: p.cnMeanings.join("\uFF1B") });
+    summaryEntries.forEach((p, i) => {
+      const isLastSummary = i === summaryEntries.length - 1;
+      additions.push({ name: p.posLabel, value: p.cnMeanings.join("\uFF1B") + (isLastSummary ? "\n\n" + EQUALS_LINE : "") });
     });
-    additions.push({ name: "", value: SEPARATOR });
     posData.forEach((p, i) => {
-      if (i > 0) {
-        additions.push({ name: "", value: SEPARATOR });
-      }
-      const value = p.lines.join("\n").replace(/\n+$/, "");
-      additions.push({ name: p.posLabel, value });
+      const isLastDetail = i === posData.length - 1;
+      const detail = p.lines.join("\n").replace(/\n+$/, "");
+      additions.push({ name: p.posLabel, value: detail + (isLastDetail ? "" : "\n\n" + EQUALS_LINE) });
     });
   }
   const res = {

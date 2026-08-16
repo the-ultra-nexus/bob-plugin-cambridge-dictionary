@@ -68,18 +68,19 @@ const main = (file: any, completion) => {
     });
     const inflectionLine = inflections.join(' | ');
 
-    // additions 按词性分组 + 分隔线：
-    //   [0] name=""    → 变形行（纯文本不可点击）："present participle digging | past tense and past participle dug\n"
-    //   [1] name="verb" → 词性汇总（Bob 原生渲染 name 为加粗标题）："挖，挖掘（土）；凿出，打（洞）"
-    //   [2] name="noun" → 词性汇总（最后一词性 value 尾空行）
-    //   [3] name=""    → 分隔线："***"
-    //   [2] name="verb" → verb 详细区（等级/语法/EN/CN/例句/习语/短语动词）
-    //   [3] name=""    → 分隔线（多词性时）
-    //   [4] name="noun" → noun 详细区
+    // additions 按词性分组 + 分隔线（不作为独立 addition，而是嵌入上一块 value 末尾）：
+    //   [0] name=""        → 变形行（纯文本不可点击）："present participle digging | past tense and past participle dug"
+    //   [1] name="verb"    → 词性汇总（Bob 原生渲染 name 为加粗标题）："挖，挖掘（土）；凿出，打（洞）"
+    //   [2] name="noun"    → 词性汇总，最后一条 value 末尾嵌入 ====："...\n\n==============================..."
+    //   [3] name="verb"    → verb 详细区（多词性时，中间详细块末尾嵌入 ====）
+    //   [4] name="noun"    → noun 详细区（最后一块不嵌 ====）
+    // 为什么不在 name="" 的独立 addition 里放 ====：Bob trim 首尾空白，独立块的前导换行无法产生视觉空行。
     // 注意：def-block 可能嵌套在 phrase-block（词组区域）中（如 not 页的 if not / or not），
     // 词组标题取 .phrase-title；中文释义必须是 def-body 的直接子级 .trans
     // （用 children(.trans) 隔离，避免误取例句块的翻译文本）。
-    const SEPARATOR = '\n' + '='.repeat(60);
+    // 分隔线 60 个 =（用户偏好，不作为独立 addition，而嵌入上一块 value 末尾，
+    // 因为 Bob 渲染独立 name="" addition 时会 trim 前导/尾随换行，无法产生视觉空行）
+    const EQUALS_LINE = '='.repeat(60);
     // 收集每个词性的数据：纯词性标签 + 中文释义(概要) + 详细内容行
     const posData: Array<{ posLabel: string; cnMeanings: string[]; lines: string[] }> = [];
     $('.entry-body__el').each((_, el) => {
@@ -130,7 +131,7 @@ const main = (file: any, completion) => {
                 result.push(en);
                 // 中文释义：始终在详细区显示 > 前缀；普通块同时收集到概要
                 if (cn) {
-                    result.push(`> ${cn}`);
+                    result.push(`|${cn}`);
                     if (!phraseTitle) {
                         cnMeanings.push(cn);
                     }
@@ -220,24 +221,24 @@ const main = (file: any, completion) => {
     // 从 posData 构建 additions
     const additions: Array<{ name: string; value: string }> = [];
     if (posData.length > 0) {
-        // 0. 变形行（不可点击纯文本；尾空行与汇总分隔）
+        // 0. 变形行（不可点击纯文本）
         if (inflectionLine) {
-            additions.push({ name: '', value: inflectionLine + '\n' });
+            additions.push({ name: '', value: inflectionLine });
         }
         // 1. 词性汇总：每词性一条，name = 词性标签（Bob 原生渲染为加粗标题），value = 中文释义（；拼接）
+        //    最后一条汇总 value 末尾嵌入 ====（前置 \n\n 让 ==== 上方有空行）
         const summaryEntries = posData.filter(p => p.cnMeanings.length > 0);
-        summaryEntries.forEach((p) => {
-            additions.push({ name: p.posLabel, value: p.cnMeanings.join('；') });
+        summaryEntries.forEach((p, i) => {
+            const isLastSummary = i === summaryEntries.length - 1;
+            additions.push({ name: p.posLabel, value: p.cnMeanings.join('；') + (isLastSummary ? '\n\n' + EQUALS_LINE : '') });
         });
-        // 2. 分隔线
-        additions.push({ name: '', value: SEPARATOR });
-        // 3. 每词性详细区（含习语/短语动词，DOM 原位）
+        // 2. 每词性详细区（含习语/短语动词，DOM 原位）。
+        //    除最后一块外，每个详细块 value 末尾嵌入 ====（"详细 → 详细"分隔；
+        //    "汇总 → 详细"分隔由汇总最后一条末尾的 ==== 提供）
         posData.forEach((p, i) => {
-            if (i > 0) {
-                additions.push({ name: '', value: SEPARATOR });
-            }
-            const value = p.lines.join('\n').replace(/\n+$/, '');
-            additions.push({ name: p.posLabel, value });
+            const isLastDetail = i === posData.length - 1;
+            const detail = p.lines.join('\n').replace(/\n+$/, '');
+            additions.push({ name: p.posLabel, value: detail + (isLastDetail ? '' : '\n\n' + EQUALS_LINE) });
         });
     }
     const res = {

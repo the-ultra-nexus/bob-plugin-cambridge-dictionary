@@ -44,8 +44,8 @@ After the loop, `additions` is assembled from `posData`:
 
 1. **Inflections line** (only when inflections exist): one entry, `name = ''`, value = `present participle digging | past tense and past participle dug` + trailing `\n`. Plain text (non-clickable).
 2. **POS summary**: one entry per POS with CN meanings, `name = <pure POS label>` (Bob renders non-empty name as **bold title** — this is the only native bolding; markdown `**` is NOT rendered by Bob). `value` = CN meanings joined by `；`. Last summary entry `value` ends with `\n` (blank line after summary).
-3. **Separator**: one entry, `name = ''`, value = leading `\n` + 60 `=` characters (the newline renders a blank line above the separator).
-4. **Per-POS detailed sections**: for each POS, one additions entry with `name = <pure POS label>` (e.g. `verb`, `noun`, `adjective`, `adverb`, `phrasal verb`). Between POS sections, another separator entry is inserted.
+3. **Separator** is **not a standalone addition**. The 60 `=` line is **embedded inside the previous block's `value`** as `'\n\n' + '='.repeat(60)` — typically appended to (a) the last summary entry (separates summary from the first detail section) and (b) every non-last detail entry (separates detail sections). Bob trims leading/trailing whitespace on addition values, so a standalone `name=""` SEPARATOR cannot produce a blank line above. Embedding keeps the internal `\n`s, which Bob renders as a visible blank line above the `====`.
+4. **Per-POS detailed sections**: for each POS, one additions entry with `name = <pure POS label>` (e.g. `verb`, `noun`, `adjective`, `adverb`, `phrasal verb`). Each non-last detail block's value ends with `\n\n` + 60 `=` (the embedded separator).
 
 ### Detailed section content (within a POS addition)
 
