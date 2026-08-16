@@ -3,30 +3,37 @@
   "versions": [
     {
       "version": "1.0.1",
-      "desc": "更新内容见: https://github.com/yaobinbin333/bob-plugin-cambridge-dictionary/releases",
+      "desc": "更新内容见: https://github.com/the-ultra-nexus/bob-plugin-cambridge-dictionary/releases",
       "sha256": "ea75ddf0329eec361221f8093cd22a25bb475ccbcabee76614a08568e8cf70c9",
-      "url": "https://github.com/yaobinbin333/bob-plugin-cambridge-dictionary/dist/bob-plugin-cambridge-dictionary-1.0.0.zip",
+      "url": "https://github.com/the-ultra-nexus/bob-plugin-cambridge-dictionary/dist/bob-plugin-cambridge-dictionary-1.0.0.zip",
       "minBobVersion": "0.8.0"
     },
     {
       "version": "1.0.2",
-      "desc": "更新内容见: https://github.com/yaobinbin333/bob-plugin-cambridge-dictionary/releases",
+      "desc": "更新内容见: https://github.com/the-ultra-nexus/bob-plugin-cambridge-dictionary/releases",
       "sha256": "483add60e0ef3f45c946c163058422d4afbc44975f405c8c9e4aa7eff2827e2f",
-      "url": "https://github.com/yaobinbin333/bob-plugin-cambridge-dictionary/dist/bob-plugin-cambridge-dictionary1.0.2.bobplugin",
+      "url": "https://github.com/the-ultra-nexus/bob-plugin-cambridge-dictionary/dist/bob-plugin-cambridge-dictionary1.0.2.bobplugin",
       "minBobVersion": "0.8.0"
     },
     {
       "version": "1.0.3",
-      "desc": "更新内容见: https://github.com/yaobinbin333/bob-plugin-cambridge-dictionary/releases",
+      "desc": "更新内容见: https://github.com/the-ultra-nexus/bob-plugin-cambridge-dictionary/releases",
       "sha256": "c50ebda9b413291133e3dbd131c469b0d2ce501722dd5b1988a6c4705a861c6d",
-      "url": "https://cdn.jsdelivr.net/gh/yaobinbin333/bob-plugin-cambridge-dictionary@main/release/bob-plugin-cambridge-dictionary1.0.3.bobplugin",
+      "url": "https://cdn.jsdelivr.net/gh/the-ultra-nexus/bob-plugin-cambridge-dictionary@main/release/bob-plugin-cambridge-dictionary1.0.3.bobplugin",
       "minBobVersion": "0.8.0"
     },
     {
       "version": "1.0.4",
-      "desc": "更新内容见: https://github.com/yaobinbin333/bob-plugin-cambridge-dictionary/releases",
+      "desc": "更新内容见: https://github.com/the-ultra-nexus/bob-plugin-cambridge-dictionary/releases",
       "sha256": "e2293d1cb91c57ad49c92702a2380cf05ded2db7e760227f9696ff6d1eb9550f",
-      "url": "https://cdn.jsdelivr.net/gh/yaobinbin333/bob-plugin-cambridge-dictionary@main/release/bob-plugin-cambridge-dictionary1.0.4.bobplugin",
+      "url": "https://cdn.jsdelivr.net/gh/the-ultra-nexus/bob-plugin-cambridge-dictionary@main/release/bob-plugin-cambridge-dictionary1.0.4.bobplugin",
+      "minBobVersion": "0.8.0"
+    },
+    {
+      "version": "1.0.5",
+      "desc": "更新内容见: https://github.com/the-ultra-nexus/bob-plugin-cambridge-dictionary/releases",
+      "sha256": "2bbca75b3cb3fa1b3468fc66518ba7fac67cbb2c4c73666e3a82879d94283e78",
+      "url": "https://cdn.jsdelivr.net/gh/the-ultra-nexus/bob-plugin-cambridge-dictionary@main/release/bob-plugin-cambridge-dictionary1.0.5.bobplugin",
       "minBobVersion": "0.8.0"
     }
   ]

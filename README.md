@@ -1,5 +1,5 @@
 <p align="center">
-<a href="https://github.com/yaobinbin333/bob-plugin-cambridge-dictionary/releases"><img src="https://img.shields.io/github/downloads/yaobinbin333/bob-plugin-cambridge-dictionary/total.svg" alt="release downloads"></a>
+<a href="https://github.com/the-ultra-nexus/bob-plugin-cambridge-dictionary/releases"><img src="https://img.shields.io/github/downloads/the-ultra-nexus/bob-plugin-cambridge-dictionary/total.svg" alt="release downloads"></a>
 </p>
 
 # bob-plugin-cambridge-dictionary

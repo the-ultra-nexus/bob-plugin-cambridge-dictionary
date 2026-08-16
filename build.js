@@ -13,10 +13,10 @@ const INFO_JSON = {
   version: version,
   category: "translate",
   name: "剑桥词典中英文翻译",
-  author: "yaobinbin333",
-  homepage: "https://github.com/yaobinbin333/bob-plugin-cambridge-dictionary",
+  author: "the-ultra-nexus",
+  homepage: "https://github.com/the-ultra-nexus/bob-plugin-cambridge-dictionary",
   minBobVersion: "0.8.0",
-  appcast: "https://cdn.jsdelivr.net/gh/yaobinbin333/bob-plugin-cambridge-dictionary@main/appcast.json",
+  appcast: "https://cdn.jsdelivr.net/gh/the-ultra-nexus/bob-plugin-cambridge-dictionary@main/appcast.json",
 };
 
 const isRelease = process.argv.includes("--release");
@@ -28,9 +28,9 @@ const initAppcast = () => {
   const hex = sum.digest("hex");
   const currentVersionInfo = {
     version,
-    desc: `更新内容见: https://github.com/yaobinbin333/bob-plugin-cambridge-dictionary/releases`,
+    desc: `更新内容见: https://github.com/the-ultra-nexus/bob-plugin-cambridge-dictionary/releases`,
     sha256: hex,
-    url: `https://cdn.jsdelivr.net/gh/yaobinbin333/bob-plugin-cambridge-dictionary@main/release/${PLUGIN_NAME}`,
+    url: `https://cdn.jsdelivr.net/gh/the-ultra-nexus/bob-plugin-cambridge-dictionary@main/release/${PLUGIN_NAME}`,
     minBobVersion: INFO_JSON.minBobVersion,
   };
   let appcastPath = path.resolve(__dirname, "./appcast.json");

@@ -17909,6 +17909,7 @@ var { root: root2 } = static_exports;
 
 // src/entry.ts
 var baseUrl = "https://dictionary.cambridge.org";
+var MAX_EXAMPLES_PER_DEF = 2;
 function translate(query, completion) {
   if (query.detectFrom !== "en" || !query.text || query.text.split(" ").length > 3) {
     completion({
@@ -17965,32 +17966,26 @@ var main = (file, completion) => {
     phonetics = [makePhonetic($2(".us .pron .ipa"), $2('.us [type="audio/mpeg"]'), "us"), makePhonetic($2(".uk .pron .ipa"), $2('.uk [type="audio/mpeg"]'), "uk")];
     api.$log.info(`phonetics${JSON.stringify(phonetics)}`);
     const parts = [];
-    const explanationCnt = $2(".entry-body__el").length;
-    console.log("explanationCnt", explanationCnt);
     $2(".entry-body__el").each((i, el) => {
-      const curPartSpeech = $2(".posgram", el).text() || $2(".anc-info-head", el).text();
+      const curPartSpeech = ($2(".posgram", el).text() || $2(".anc-info-head", el).text()).trim();
       $2(".dsense", el).each((index2, element) => {
-        const dBlock = $2(".def-block", element).each((index3, element2) => {
+        $2(".def-block", element).each((index3, element2) => {
           const enExplanation = $2(".ddef_h", element2).text();
           const cnExplanation = $2(".ddef_b", element2).children().first().text();
           pushPart(parts, `${curPartSpeech}-\u82F1\u6587\u91CA\u4E49`, enExplanation);
           pushPart(parts, `${curPartSpeech}-\u4E2D\u6587\u91CA\u4E49`, cnExplanation);
           addMap(partMap, curPartSpeech, cnExplanation);
           let exampleCnt = 0;
-          let shouldPushEg = true;
           $2(".examp", element2).each((index4, element3) => {
+            if (exampleCnt >= MAX_EXAMPLES_PER_DEF) {
+              return;
+            }
             const enExample = $2(".eg", element3).text();
             const cnExample = $2(".eg", element3).next().text();
-            if (shouldPushEg) {
-              pushPart(parts, `\u4F8B\u53E5${index4 + 1}`, `${enExample}
+            pushPart(parts, `\u4F8B\u53E5${exampleCnt + 1}`, `${enExample}
 ${cnExample}`);
-            }
             exampleCnt++;
-            if (explanationCnt > 1 && exampleCnt >= 1) {
-              shouldPushEg = false;
-            }
           });
-          shouldPushEg = true;
         });
       });
     });
