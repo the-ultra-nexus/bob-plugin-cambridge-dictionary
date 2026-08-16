@@ -26,46 +26,39 @@ interface Addition { name: string; value: string }
   toParagraphs: [word],          // identical today — keep as-is unless Bob UI behavior requires a change
   toDict: {
     phonetics,                  // Phonetic[] — us + uk entries
-    additions,                  // Addition[] — POS summary + per-POS detailed sections
-    exchanges,                  // Exchange[] — word-form inflections only
-    relatedWordParts,           // RelatedWordPart[] — idioms and phrasal verbs (blue clickable)
+    additions,                  // Addition[] — inflections line + POS summary + per-POS detailed sections
+    exchanges: [],              // always empty (inflections moved to additions; Bob exchanges words are tappable)
     word
   },
   raw: ''
 }
 ```
 
-`parts` is **not** populated (all display content lives in `additions` + `exchanges` + `relatedWordParts`). `phonetics` order is `[us, uk]`.
+`parts` is **not** populated (all display content lives in `additions`). `phonetics` order is `[us, uk]`. `exchanges` is always an empty array (see below).
 
-### additions semantics (Bob renders `phonetics → exchanges → additions` in fixed order)
+### additions semantics (Bob renders `phonetics → additions` in fixed order)
 
-Additions are grouped by part of speech (POS) with `*` separators:
+Additions are grouped by part of speech (POS) with separator lines:
 
 ```
-[POS summary: one line per POS, CN meanings joined by ；]
-[************************************************************]
-[POS label as section header, detailed definitions, idioms, phrasal verbs]
-[************************************************************]  (if more than one POS)
+[inflections line, plain text, one line]  (only when the word has inflections)
+[POS label as bold header]                (Bob renders non-empty name as bold title)
+[CN meanings joined by ；]
+...one such header+meaning pair per POS...
+[separator line]
+[POS label as bold header]
+[detailed definitions, > CN, examples, 习语/短语动词]
+[separator line]  (if more than one POS)
 [next POS section]
 ```
 
-- **POS summary** (first entry, `name = ''`): one line per POS, format `<posLabel>：<cn1>；<cn2>；<cn3>`. `posLabel` is the pure POS name (`.posgram > .pos`), without grammar tags like `[T]` `[C]`. CN meanings from ordinary def-blocks, deduped, joined by `；`.
-- **Separator** (second entry, `name = ''`): `************************************************************` (60 `*`).
-- **POS detailed sections** (subsequent entries, `name = <pure POS label>` e.g. `verb`, `noun`, `adjective`, `adverb`, `phrasal verb`): each contains all definitions, `> CN` lines, and examples. Between POS sections, another `*` separator entry is inserted.
-  - Definition blocks: level + grammar → EN definition → `> CN` → `• examples`
-  - Phrase panels: `(title)` → EN → `> CN` → `• examples`
-- No `dsense_h` guide-word titles, no idioms, no phrasal verbs in additions (they are moved to `relatedWordParts`).
+- **Inflections line** (first entry, `name = ''`, only when inflections exist): one plain-text line, e.g. `present participle digging | past tense and past participle dug`. Never in `exchanges` (Bob renders exchange words as tappable links; user requires non-clickable).
+- **POS summary**: one entry per POS with CN meanings, `name = <pure POS label>` (e.g. `verb`, `noun` — Bob renders the name as a **bold title**, this is how labels get bolded; markdown `**` is NOT supported by Bob). `value` = CN meanings joined by `；`. The last summary entry's `value` ends with a trailing newline (blank line after summary).
+- **Separator**: `name = ''`, `value` = 60 characters of `=` (user-chosen; previously `*`).
+- **POS detailed sections**: one entry per POS, `name = <pure POS label>`, `value` = all definitions (`level+grammar` → EN → `> CN` → `• examples`), phrase panels (`(title)` → EN → `> CN` → `• examples`), then 习语/短语动词 with `① ② …` numbered items inline. Between POS sections, a separator entry is inserted.
+- `dsense_h` guide-word titles are not shown (used only for DOM grouping).
 - No `{可点击}` / `{同上}` / `{按照；分割组合}` annotations appear in output.
-
-### relatedWordParts semantics (idioms and phrasal verbs, Bob renders after exchanges)
-
-- One entry per POS + xref type, `part = "<posLabel> 习语"` | `"<posLabel> 短语动词"`.
-- `words` = array of `{ word: "<phrase>" }` objects. `word` is rendered as blue clickable text (re-query).
-- Example: `{ part: "verb 习语", words: [{ word: "dig your heels in" }, { word: "dig your own grave" }] }`
-
-### exchanges semantics
-
-Only inflections: one per `.irreg-infls .inf-group`, `{ name: <lab>, words: [<inf>] }` (e.g. `present participle: digging`). Bob renders `name: word` and **words are tappable** (re-query). Never put non-inflection content here unless the user approves losing the in-POS placement.
+- CN lines always use `> ` prefix (exactly one space after `>`).
 
 ## Naming Conventions
 

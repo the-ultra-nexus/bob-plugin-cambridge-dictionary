@@ -69,15 +69,17 @@ const main = (file: any, completion) => {
     const inflectionLine = inflections.join(' | ');
 
     // additions 按词性分组 + 分隔线：
-    //   [0] name=""    → 变形行 + POS 概要（词性标签加粗）："present participle digging | ...\n\n**verb**.  挖，挖掘（土）；凿出，打（洞）\n"
-    //   [1] name=""    → 分隔线："***"
+    //   [0] name=""    → 变形行（纯文本不可点击）："present participle digging | past tense and past participle dug\n"
+    //   [1] name="verb" → 词性汇总（Bob 原生渲染 name 为加粗标题）："挖，挖掘（土）；凿出，打（洞）"
+    //   [2] name="noun" → 词性汇总（最后一词性 value 尾空行）
+    //   [3] name=""    → 分隔线："***"
     //   [2] name="verb" → verb 详细区（等级/语法/EN/CN/例句/习语/短语动词）
     //   [3] name=""    → 分隔线（多词性时）
     //   [4] name="noun" → noun 详细区
     // 注意：def-block 可能嵌套在 phrase-block（词组区域）中（如 not 页的 if not / or not），
     // 词组标题取 .phrase-title；中文释义必须是 def-body 的直接子级 .trans
     // （用 children(.trans) 隔离，避免误取例句块的翻译文本）。
-    const SEPARATOR = '==============================================================================';
+    const SEPARATOR = '====================================================================';
     // 收集每个词性的数据：纯词性标签 + 中文释义(概要) + 详细内容行
     const posData: Array<{ posLabel: string; cnMeanings: string[]; lines: string[] }> = [];
     $('.entry-body__el').each((_, el) => {
@@ -221,27 +223,20 @@ const main = (file: any, completion) => {
     // 从 posData 构建 additions
     const additions: Array<{ name: string; value: string }> = [];
     if (posData.length > 0) {
-        // 0. 头部区：变形行（如有）+ 词性概要（词性标签加粗 + 中文释义；尾空行）
-        const headLines: string[] = [];
+        // 0. 变形行（不可点击纯文本；尾空行与汇总分隔）
         if (inflectionLine) {
-            headLines.push(inflectionLine);
+            additions.push({ name: '', value: inflectionLine + '\n' });
         }
-        const summaryLines = posData
-            .filter(p => p.cnMeanings.length > 0)
-            .map(p => `**${p.posLabel}**.  ${p.cnMeanings.join('；')}`);
-        if (summaryLines.length > 0) {
-            if (headLines.length) {
-                headLines.push('');
-            }
-            headLines.push(...summaryLines);
-        }
-        if (headLines.length) {
-            // 末尾空行：汇总结束空一行
-            additions.push({ name: '', value: headLines.join('\n') + '\n' });
-        }
-        // 1. 分隔线
+        // 1. 词性汇总：每词性一条，name = 词性标签（Bob 原生渲染为加粗标题），
+        //    value = 中文释义（；拼接）。最后一条汇总 value 尾加空行（汇总结束空一行）
+        const summaryEntries = posData.filter(p => p.cnMeanings.length > 0);
+        summaryEntries.forEach((p, i) => {
+            const isLast = i === summaryEntries.length - 1;
+            additions.push({ name: p.posLabel, value: p.cnMeanings.join('；') + (isLast ? '\n' : '') });
+        });
+        // 2. 分隔线
         additions.push({ name: '', value: SEPARATOR });
-        // 2. 每词性详细区（含习语/短语动词，DOM 原位）
+        // 3. 每词性详细区（含习语/短语动词，DOM 原位）
         posData.forEach((p, i) => {
             if (i > 0) {
                 additions.push({ name: '', value: SEPARATOR });

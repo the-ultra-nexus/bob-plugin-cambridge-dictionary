@@ -24,53 +24,41 @@ All from `main(file, completion)` in `src/entry.ts`:
 | Usage label | `.def-info .lab` | e.g. `UK disapproving`, `old-fashioned slang`; can nest region+usage spans |
 | Phrase panel title | `$(blockEl).parents('.phrase-block').find('.phrase-title')` | e.g. `if not`, `dig someone in the ribs`, `digs` — rendered as `(title)` on its own line |
 | Example block | `.examp` (nested in def-block) | EN `.eg`, CN `:first .trans` inside the same `.examp` |
-| Inflection (word forms) | `.irreg-infls .inf-group` | `.lab` = label, `.inf` = form; one exchange per group |
+| Inflection (word forms) | `.irreg-infls .inf-group` | `.lab` = label, `.inf` = form; joined into one plain-text line (`lab inf`, groups joined by ` | `)
 | Idioms xref | `.xref.idioms .x-h`, `.xref.idiom .x-h` | Phrase names, one per line |
 | Phrasal verbs xref | `.xref.phrasal_verbs .x-h` | Phrase names, one per line |
 | Excluded xrefs | `.xref.grammar`, `.xref.related_words` | Usage notes / related words — never rendered |
 
-## Assembly Pattern (additions + exchanges)
+## Assembly Pattern (additions only)
 
-Bob renders `phonetics → exchanges → additions` in fixed order, so nothing in `additions` can appear above the exchanges block. The parser produces:
-
-### exchanges (words are tappable in Bob)
-- Inflections only: one per `.inf-group` (`{ name: <lab>, words: [<inf>] }`).
-- Idioms / phrasal verbs are **not** in exchanges: they would be pinned to the top of the card, but they must sit under their own part of speech (user requirement) — see additions.
+Bob renders `phonetics → additions` in fixed order. `exchanges` and `relatedWordParts` are always empty (Bob renders exchange/related-word items as tappable links; user requires plain text). The parser produces:
 
 ### additions (built from `posData` array after the DOM loop)
 
 Each `.entry-body__el` is processed into a `posData` entry: `{ posLabel, cnMeanings[], lines[] }`.
 `posLabel` = pure POS name from `.posgram > .pos` (fallback `.anc-info-head > .pos`).
-`cnMeanings` = CN translations from ordinary def-blocks (deduped, for the summary line).
+`cnMeanings` = CN translations from ordinary def-blocks (deduped, for the summary entries).
 `lines` = all detailed content lines (definitions, `> CN`, examples, idioms, phrasal verbs).
 
 After the loop, `additions` is assembled from `posData`:
 
-1. **POS summary** (if any POS has CN meanings): one entry, `name = ''`, value = one line per POS like `verb：挖，挖掘（土）；凿出，打（洞）`. Chinese meanings joined by `；`.
-2. **Separator**: one entry, `name = ''`, value = `************************************************************` (60 `*`).
-3. **Per-POS detailed sections**: for each POS, one additions entry with `name = <pure POS label>` (e.g. `verb`, `noun`, `adjective`, `adverb`, `phrasal verb`). Between POS sections, another `*` separator entry is inserted.
-4. **relatedWordParts**: for each POS with xrefs, one entry `{ part: "<posLabel> 习语" | "<posLabel> 短语动词", words: [{ word: "<phrase>" }, ...] }`. `word` is blue clickable (re-query).
+1. **Inflections line** (only when inflections exist): one entry, `name = ''`, value = `present participle digging | past tense and past participle dug` + trailing `\n`. Plain text (non-clickable).
+2. **POS summary**: one entry per POS with CN meanings, `name = <pure POS label>` (Bob renders non-empty name as **bold title** — this is the only native bolding; markdown `**` is NOT rendered by Bob). `value` = CN meanings joined by `；`. Last summary entry `value` ends with `\n` (blank line after summary).
+3. **Separator**: one entry, `name = ''`, value = 60 `=` characters.
+4. **Per-POS detailed sections**: for each POS, one additions entry with `name = <pure POS label>` (e.g. `verb`, `noun`, `adjective`, `adverb`, `phrasal verb`). Between POS sections, another separator entry is inserted.
 
 ### Detailed section content (within a POS addition)
 
-- **Definition blocks**: `(phraseTitle)` / `<level+grammar>` + ` <usage>` / EN line / `> CN` / `• examples`. All CN translations are shown in the detailed section with `> ` prefix (both ordinary and phrase-panel).
+- **Definition blocks**: `(phraseTitle)` / `<level+grammar>` + ` <usage>` / EN line / `> CN` / `• examples`. All CN translations are shown in the detailed section with `> ` prefix (exactly one space; both ordinary and phrase-panel).
 - **Ordinary blocks** (`!phraseTitle && !lab`): get a trailing blank line.
 - **Phrase-panel blocks** (`(if not)`, `(dig someone in the ribs)`, `(digs)`…): CN is shown inline with `> ` prefix (same as ordinary blocks).
 - **dsense_h** guide-word titles are **not** shown in the output (used only for DOM grouping).
-- **Idioms / phrasal verbs**: NOT in additions. See `relatedWordParts` below.
+- **Idioms / phrasal verbs**: appended directly to `lines` in DOM position with header `习语` / `短语动词` and `① ② ③…` numbered items (numbering restarts per POS per type via `xrefSeq`).
 
 ### CN summary behavior
-- CN from ordinary def-blocks goes to both the summary line (joined by `；`) and the detailed section (`> CN`).
+- CN from ordinary def-blocks goes to both the summary entries (joined by `；`) and the detailed section (`> CN`).
 - CN from phrase-panel blocks goes only to the detailed section (`> CN`), not to the summary.
-- The summary line format is `<posLabel>.  <cn1>；<cn2>`, using the pure POS name (`.posgram > .pos`), without grammar tags like `[T]` `[C]`.
-
-### relatedWordParts (idioms and phrasal verbs)
-
-Built after the DOM loop from `posData[].xrefs`:
-- One entry per `{ posLabel, xrefName }` combination, e.g. `part: "verb 习语"`.
-- `words` = array of `{ word: "<phrase>" }`. Each `word` is rendered as blue clickable text (re-query).
-- Multiple same-type xrefs in one POS merge (items accumulated in `xrefs[]`).
-- No `① ②` numbering (Bob renders the list directly).
+- Summary `name` = pure POS label (`.posgram > .pos`), without grammar tags like `[T]` `[C]` — Bob renders it as a bold title.
 
 ### Fallbacks
 - No `.pos-body` (phrase entries): iterate `$('.dsense', el)` in document order.

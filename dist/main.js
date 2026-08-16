@@ -17958,7 +17958,7 @@ var main = (file, completion) => {
     });
   });
   const inflectionLine = inflections.join(" | ");
-  const SEPARATOR = "==============================================================================";
+  const SEPARATOR = "====================================================================";
   const posData = [];
   $2(".entry-body__el").each((_, el) => {
     const posLabel = $2(".posgram .pos", el).first().text().replace(/\s+/g, " ").trim() || $2(".anc-info-head .pos", el).first().text().replace(/\s+/g, " ").trim();
@@ -18083,20 +18083,14 @@ var main = (file, completion) => {
   });
   const additions = [];
   if (posData.length > 0) {
-    const headLines = [];
     if (inflectionLine) {
-      headLines.push(inflectionLine);
+      additions.push({ name: "", value: inflectionLine + "\n" });
     }
-    const summaryLines = posData.filter((p) => p.cnMeanings.length > 0).map((p) => `**${p.posLabel}**.  ${p.cnMeanings.join("\uFF1B")}`);
-    if (summaryLines.length > 0) {
-      if (headLines.length) {
-        headLines.push("");
-      }
-      headLines.push(...summaryLines);
-    }
-    if (headLines.length) {
-      additions.push({ name: "", value: headLines.join("\n") + "\n" });
-    }
+    const summaryEntries = posData.filter((p) => p.cnMeanings.length > 0);
+    summaryEntries.forEach((p, i) => {
+      const isLast = i === summaryEntries.length - 1;
+      additions.push({ name: p.posLabel, value: p.cnMeanings.join("\uFF1B") + (isLast ? "\n" : "") });
+    });
     additions.push({ name: "", value: SEPARATOR });
     posData.forEach((p, i) => {
       if (i > 0) {
