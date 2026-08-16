@@ -36,108 +36,78 @@ function translate(query, completion) {
         }
     });
 }
-const addMap = (map: Map<string, string[]>, key: string ,value: string) => {
-    if (map.has(key)) {
-        map.get(key)?.push(value);
-    }else {
-        map.set(key, [value]);
-    }
-}
-const mapToParts = (map: Map<string, string[]>) => {
-    const parts: Part[] = [];
-    map.forEach((value, key) => {
-        parts.push({
-            part: key,
-            means: value
-        })
-    })
-    return parts;
-}
 const main = (file: any, completion) => {
-    const pushPart = (parts, part, ...means) => {
-        if (means) {
-          parts.push({
-            part: part.trim(),
-            means: means.map(mean => mean.trim())
-          })
-        }
-      }
     const $ = load(file);
     const word = $('.headword').first().text();
     const hasWord = $('.headword').html();
     Bob.api.$log.info(`word: ${word}`);
-    let phonetics: Phonetic[] = []
-    const partMap = new Map<string, string[]>();
-    if (hasWord) {
-        phonetics = [makePhonetic($('.us .pron .ipa'), $('.us [type="audio/mpeg"]'), 'us'), makePhonetic($('.uk .pron .ipa'), $('.uk [type="audio/mpeg"]'), 'uk')];
-        // 英文释义、中文释义、例句
-        Bob.api.$log.info(`phonetics${JSON.stringify(phonetics)}`);
-        const parts: any[] = [];
-        $('.entry-body__el').each((i, el) => {
-            // 词性：名词、形容词等，anc-info-head为短语的时候词性classname
-            const curPartSpeech = ($('.posgram', el).text() || $('.anc-info-head', el).text()).trim();
-            $('.dsense', el).each((index, element) => {
-                $('.def-block', element).each((index, element) => {
-                    const enExplanation = $('.ddef_h', element).text();
-                    const cnExplanation = $('.ddef_b', element).children().first().text();
-                    pushPart(parts, `${curPartSpeech}-英文释义`, enExplanation);
-                    pushPart(parts, `${curPartSpeech}-中文释义`, cnExplanation);
-                    addMap(partMap, curPartSpeech, cnExplanation);
-                    // 每个释义块最多收集 2 条例句，避免多义词例句过多
-                    let exampleCnt = 0;
-                    $('.examp', element).each((index, element) => {
-                        if (exampleCnt >= MAX_EXAMPLES_PER_DEF) {
-                            return;
-                        }
-                        const enExample = $('.eg', element).text();
-                        const cnExample = $('.eg', element).next().text();
-                        pushPart(parts, `例句${exampleCnt + 1}`, `${enExample}\n${cnExample}`)
-                        exampleCnt++;
-                    })
-                });
-            });
-        })
-        Bob.api.$log.info(`parts${parts}`);
-        const res = {
-            from: 'en',
-            to: 'zh-Hans',
-            fromParagraphs: [
-                word
-            ],
-            toDict: {
-                phonetics,
-                additions: transformToAdditions(parts), // 把词义转化为additions结构增加可读性
-                parts: mapToParts(partMap),
-                word: word
-            },
-            raw: '',
-            toParagraphs: [ word ],
-        }
-        completion({
-            result: res
-        });
-        Bob.api.$log.info(`res${res}`);
-
-    }else {
+    if (!hasWord) {
         completion({
             error: {
                 type: 'notFound',
             }
         });
+        return;
     }
+    const phonetics: Phonetic[] = [
+        makePhonetic($('.us .pron .ipa'), $('.us [type="audio/mpeg"]'), 'us'),
+        makePhonetic($('.uk .pron .ipa'), $('.uk [type="audio/mpeg"]'), 'uk')
+    ];
+    // 词性分组：每个词性一组，组内按释义块组织
+    // 释义行：全局连续序号 + 英文释义 + 中文释义（无中文释义则省略，避免误取例句）
+    // 例句行：最多 MAX_EXAMPLES_PER_DEF 条，英中同行
+    const parts: Part[] = [];
+    let senseNo = 0;
+    $('.entry-body__el').each((_, el) => {
+        // 词性：名词、形容词等，anc-info-head为短语的时候词性classname
+        const partSpeech = ($('.posgram', el).text() || $('.anc-info-head', el).text()).trim();
+        const means: string[] = [];
+        $('.dsense', el).each((_, senseEl) => {
+            $('.def-block', senseEl).each((_, blockEl) => {
+                senseNo++;
+                const enExplanation = $('.ddef_d', blockEl).text();
+                const cnExplanation = $('.def-body .trans', blockEl).first().text();
+                means.push(cnExplanation ? `${senseNo}. ${enExplanation}  ${cnExplanation}` : `${senseNo}. ${enExplanation}`);
+                let exampleCnt = 0;
+                $('.examp', blockEl).each((_, exEl) => {
+                    if (exampleCnt >= MAX_EXAMPLES_PER_DEF) {
+                        return;
+                    }
+                    const enExample = $('.eg', exEl).text();
+                    const cnExample = $('.trans', exEl).first().text();
+                    means.push(cnExample ? `• ${enExample}  ${cnExample}` : `• ${enExample}`);
+                    exampleCnt++;
+                });
+            });
+        });
+        if (means.length) {
+            parts.push({ part: partSpeech, means });
+        }
+    });
+    const res = {
+        from: 'en',
+        to: 'zh-Hans',
+        fromParagraphs: [
+            word
+        ],
+        toDict: {
+            phonetics,
+            additions: [],
+            parts,
+            word: word
+        },
+        raw: '',
+        toParagraphs: [ word ],
+    }
+    completion({
+        result: res
+    });
+    Bob.api.$log.info(`res${JSON.stringify(res)}`);
 }
+
 const cache = new Bob.Cache();
 const INSTALL = "__INSTALLED";
 
-// transform parts to additions
-const transformToAdditions = (parts: Part[]) => {
-    return parts.map(part => {
-        return {
-            name: part.part,
-            value: part.means.join(';')
-        }
-    })
-}
 const makePhonetic = ($textEl: Cheerio<AnyNode>, $audioEl: Cheerio<AnyNode>, type: string): Phonetic => {
     const value = $textEl.first().text() ?? '';
     const audio = $audioEl.attr('src');

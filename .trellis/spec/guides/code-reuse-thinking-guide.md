@@ -21,7 +21,7 @@ When you copy-paste or rewrite existing logic:
 
 ```bash
 # Search for similar function names
-grep -rn "pushPart\|addMap\|mapToParts\|makePhonetic\|transformToAdditions" src/
+grep -rn "makePhonetic\|ddef_d\|def-body\|examp" src/
 
 # Search for similar logic / selectors before adding a new one
 grep -rn "\.ddef_\|\.examp\|\.eg\b" src/
@@ -38,12 +38,10 @@ grep -rn "\.ddef_\|\.examp\|\.eg\b" src/
 
 ---
 
-## Local Reuse Patterns (already in `src/entry.ts`)
+## Local Reuse Patterns (in `src/entry.ts`)
 
-- `pushPart(parts, part, ...means)` — building display part rows.
-- `addMap(map, key, value)` + `mapToParts(map)` — aggregating sense means per part of speech.
 - `makePhonetic($textEl, $audioEl, type)` — both US and UK phonetics.
-- `transformToAdditions(parts)` — flattening `Part[]` into `additions` display rows.
+- The `main()` assembly loop — one group per part of speech, `senseNo` global counter, sense rows `` `${n}. ${en}  ${cn}` `` + example rows `` `• ${enEx}  ${cnEx}` ``.
 
 If you need a new display aggregation, extend these — do not write a second aggregation loop.
 
@@ -52,8 +50,8 @@ If you need a new display aggregation, extend these — do not write a second ag
 ## Anti-Patterns Specific to This Repo
 
 1. **Copying the SDK**: `src/helper/service.ts` / `sign.ts` / `fetch.ts` already duplicate `@volcengine/openapi` (an optionalDependency). Never copy more of that SDK in.
-2. **Duplicate parse loops**: re-implementing `addMap`/`pushPart` inline in a new feature instead of reusing them.
-3. **Repeated selector literals**: scatter `.entry-body__el`, `.ddef_b`, etc. across new code instead of following the pattern in `src/entry.ts` (and `spec/plugin/scraping.md`).
+2. **Duplicate parse loops**: writing a second sense/example assembly pass instead of extending the `main()` grouping loop in `src/entry.ts`.
+3. **Repeated selector literals**: scatter `.entry-body__el`, `.ddef_d`, `.def-body .trans`, etc. across new code instead of following the pattern in `src/entry.ts` (and `spec/plugin/scraping.md`).
 4. **New dead scaffolding**: adding a util file nobody imports, "just in case" (see `utils.ts`'s `createDebug` — created, imported by dead code only).
 
 ---

@@ -17,20 +17,19 @@ All from `main(file, completion)` in `src/entry.ts`:
 | Entry container | `.entry-body__el` | One per part-of-speech block |
 | Sense | `.dsense` (nested in entry) | |
 | Definition block | `.def-block` (nested in sense) | |
-| EN definition | `.ddef_h`, `.text()` | |
-| CN definition | `.ddef_b`, `.children().first().text()` | Use first child, NOT `.text()` — full text picks up extra wrapper content |
+| EN definition | `.ddef_d` (in `.ddef_h`), `.text()` | Pure definition text; `.ddef_h` includes the level badge (A1/A2) — use `.ddef_d` to exclude it |
+| CN definition | `.def-body .trans` first node, `.text()` | `.def-body` is `.ddef_b`. Some blocks have **no** CN translation (first child is the example block) — skip the CN row when empty instead of misreading an example |
 | Example block | `.examp` (nested in def-block) | |
 | Example EN | `.eg`, `.text()` | |
-| Example CN | `.eg` sibling via `.next()`, `.text()` | The CN translation is the element right after `.eg` |
+| Example CN | `.trans` first node inside the `.examp`, `.text()` | Not a sibling `.next()` — inside recent page markup the CN translation lives inside `.examp` |
 
-## Aggregation Pattern (multi-sense words)
+## Assembly Pattern (parts grouping)
 
-Senses are aggregated per part of speech with a `Map<string, string[]>`:
+The parser produces Bob `parts` directly — one group per part of speech, means flat in page order:
 
-- `addMap(map, key, value)` — push value onto the array for `key`.
-- `mapToParts(map)` — convert to `Part[]` (`{ part, means }`).
-- Display parts are built with `pushPart(parts, part, ...means)`, using keys like `` `${partOfSpeech}-英文释义` ``, `` `${partOfSpeech}-中文释义` ``, and `` `例句${n}` `` (value is `enExample\ncnExample`). The part-of-speech label is `.trim()`-ed once before use (`curPartSpeech = (...).trim()`), so both display keys and `partMap` keys are whitespace-free.
-- `transformToAdditions(parts)` — flattens each part to `{ name, value: means.join(';') }` for the `additions` display rows.
+- Per `.entry-body__el` (part of speech): `part = (.posgram || .anc-info-head).trim()`.
+- Per `.def-block`: one sense row `` `${senseNo}. ${en}  ${cn}` `` (global `senseNo` counter across all groups; CN omitted when the block has no CN translation), then up to `MAX_EXAMPLES_PER_DEF` example rows `` `• ${enExample}  ${cnExample}` `` (CN omitted when missing).
+- `toDict.additions` stays `[]`; all display content lives in `parts`.
 
 ## Example Cap
 
@@ -43,11 +42,12 @@ Every def-block contributes **at most 2 examples** (`MAX_EXAMPLES_PER_DEF = 2` i
 - `break-down.html` — phrase entry (`break down`), uses `.anc-info-head`.
 - `build.html` — multi-part-of-speech verb/noun entry, uses `.posgram`.
 - `iceberg.html` — single part-of-speech word.
+- `not.html` — 6 sense blocks where two blocks have **no CN translation**; exercises the CN-skip behavior.
 - `pursuer.html` — ⚠️ **stale duplicate of `build.html`** (same `<title>build...`). Do not use it as authoritative; prefer a fresh snapshot when testing new shapes.
 
 ## Anti-Patterns
 
-- Using `.text()` on `.ddef_b` (loses the intended first-child boundary) or on `.headword` blocks for the presence check.
+- Using `.text()` on `.ddef_h` for definitions (picks up the A1/A2 badge) or relying on the first child of `.def-body` being the CN translation (blocks without CN start with the example block — check `def-body .trans` first instead).
 - Assuming every entry has `.posgram` — phrases need the `.anc-info-head` fallback.
 - Building the audio URL without the `baseUrl` prefix.
 - Relying on the live page structure without re-checking the fixtures after a Cambridge markup change (site updates have broken this parser before).

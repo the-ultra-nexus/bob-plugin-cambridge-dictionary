@@ -24,8 +24,8 @@ interface TTS { type: string; value: string }
   toParagraphs: [word],          // identical today — keep as-is unless Bob UI behavior requires a change
   toDict: {
     phonetics,                  // Phonetic[] — us + uk entries
-    additions,                  // { name, value }[] — display rows, one per part/example group
-    parts,                      // Part[] — aggregated means per part of speech
+    additions: [],              // always empty — all display content lives in `parts`
+    parts,                      // Part[] — sense + example rows, grouped per part of speech
     word
   },
   raw: ''
