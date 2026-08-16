@@ -3,6 +3,8 @@ import { load, Cheerio, AnyNode } from 'cheerio';
 import { Part, Phonetic } from './helper/types';
 
 const baseUrl = 'https://dictionary.cambridge.org';
+// 每个释义块最多收集的例句数
+const MAX_EXAMPLES_PER_DEF = 2;
 
 /**
  *
@@ -71,33 +73,27 @@ const main = (file: any, completion) => {
         // 英文释义、中文释义、例句
         Bob.api.$log.info(`phonetics${JSON.stringify(phonetics)}`);
         const parts: any[] = [];
-        // 单词几个词性
-        const explanationCnt = $('.entry-body__el').length;
-        console.log('explanationCnt', explanationCnt);
         $('.entry-body__el').each((i, el) => {
             // 词性：名词、形容词等，anc-info-head为短语的时候词性classname
-            const curPartSpeech = $('.posgram', el).text() || $('.anc-info-head', el).text();
+            const curPartSpeech = ($('.posgram', el).text() || $('.anc-info-head', el).text()).trim();
             $('.dsense', el).each((index, element) => {
-                const dBlock = $('.def-block', element).each((index, element) => {
+                $('.def-block', element).each((index, element) => {
                     const enExplanation = $('.ddef_h', element).text();
                     const cnExplanation = $('.ddef_b', element).children().first().text();
                     pushPart(parts, `${curPartSpeech}-英文释义`, enExplanation);
                     pushPart(parts, `${curPartSpeech}-中文释义`, cnExplanation);
                     addMap(partMap, curPartSpeech, cnExplanation);
+                    // 每个释义块最多收集 2 条例句，避免多义词例句过多
                     let exampleCnt = 0;
-                    let shouldPushEg = true;
                     $('.examp', element).each((index, element) => {
+                        if (exampleCnt >= MAX_EXAMPLES_PER_DEF) {
+                            return;
+                        }
                         const enExample = $('.eg', element).text();
                         const cnExample = $('.eg', element).next().text();
-                        if (shouldPushEg) {
-                            pushPart(parts, `例句${index + 1}`, `${enExample}\n${cnExample}`)
-                        }
+                        pushPart(parts, `例句${exampleCnt + 1}`, `${enExample}\n${cnExample}`)
                         exampleCnt++;
-                        if (explanationCnt > 1 && exampleCnt >= 1) {
-                            shouldPushEg = false;
-                        }
                     })
-                    shouldPushEg = true;
                 });
             });
         })

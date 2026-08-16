@@ -29,12 +29,12 @@ Senses are aggregated per part of speech with a `Map<string, string[]>`:
 
 - `addMap(map, key, value)` — push value onto the array for `key`.
 - `mapToParts(map)` — convert to `Part[]` (`{ part, means }`).
-- Display parts are built with `pushPart(parts, part, ...means)`, using keys like `` `${partOfSpeech}-英文释义` ``, `` `${partOfSpeech}-中文释义` ``, and `` `例句${n}` `` (value is `enExample\ncnExample`).
+- Display parts are built with `pushPart(parts, part, ...means)`, using keys like `` `${partOfSpeech}-英文释义` ``, `` `${partOfSpeech}-中文释义` ``, and `` `例句${n}` `` (value is `enExample\ncnExample`). The part-of-speech label is `.trim()`-ed once before use (`curPartSpeech = (...).trim()`), so both display keys and `partMap` keys are whitespace-free.
 - `transformToAdditions(parts)` — flattens each part to `{ name, value: means.join(';') }` for the `additions` display rows.
 
-## Example Dedup
+## Example Cap
 
-When a word has multiple `.entry-body__el` blocks (`explanationCnt > 1`), only the **first** example of each def-block is collected (`shouldPushEg` flag resets per def-block). This keeps the result compact for multi-definition words. Preserve this behavior when refactoring the parse loop.
+Every def-block contributes **at most 2 examples** (`MAX_EXAMPLES_PER_DEF = 2` in `src/entry.ts`), numbered `例句1`, `例句2` contiguously within the block. This replaced an older inconsistent rule (unlimited for single-POS words, 1 for multi-POS words). Keep the cap when refactoring the parse loop.
 
 ## Fixtures for Offline Checks
 
