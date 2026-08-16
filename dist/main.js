@@ -17997,7 +17997,7 @@ var main = (file, completion) => {
         }
         result.push(en);
         if (cn) {
-          result.push(`|${cn}`);
+          result.push(`> ${cn}`);
           if (!phraseTitle) {
             cnMeanings.push(cn);
           }

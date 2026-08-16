@@ -131,7 +131,8 @@ const main = (file: any, completion) => {
                 result.push(en);
                 // 中文释义：始终在详细区显示 > 前缀；普通块同时收集到概要
                 if (cn) {
-                    result.push(`|${cn}`);
+                    // > 后一个空格（用户要求）：用 > 前缀渲染中文释义，普通块同时收集到概要
+                    result.push(`> ${cn}`);
                     if (!phraseTitle) {
                         cnMeanings.push(cn);
                     }
