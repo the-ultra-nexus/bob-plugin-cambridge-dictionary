@@ -17947,34 +17947,38 @@ var main = (file, completion) => {
     makePhonetic($2(".us .pron .ipa"), $2('.us [type="audio/mpeg"]'), "us"),
     makePhonetic($2(".uk .pron .ipa"), $2('.uk [type="audio/mpeg"]'), "uk")
   ];
-  const exchanges = [];
+  const inflections = [];
   $2(".entry-body__el").each((_, el) => {
     $2(".irreg-infls .inf-group", el).each((_2, g) => {
       const lab = $2(".lab", g).text().replace(/\s+/g, " ").trim();
       const inf = $2(".inf", g).text().replace(/\s+/g, " ").trim();
       if (lab && inf) {
-        exchanges.push({ name: lab, words: [inf] });
+        inflections.push(`${lab} ${inf}`);
       }
     });
   });
-  const additions = [];
-  const cnGroups = [];
+  const inflectionLine = inflections.join(" | ");
+  const SEPARATOR = "==============================================================================";
+  const posData = [];
   $2(".entry-body__el").each((_, el) => {
-    const headerWord = $2(".di-title .headword", el).first().text().replace(/\s+/g, " ").trim() || word;
-    const posgramText = $2(".posgram", el).first().text().replace(/\s+/g, " ").trim();
-    const ancEl = $2(".anc-info-head", el).first();
-    const ancPos = $2(".pos", ancEl).text().replace(/\s+/g, " ").trim();
-    const posTitle = posgramText ? `${headerWord} ${posgramText}` : ancPos ? `${headerWord} ${ancPos}` : headerWord;
-    const posRaw = ($2(".posgram", el).text() || $2(".anc-info-head", el).text()).replace(/\s+/g, " ").trim();
+    const posLabel = $2(".posgram .pos", el).first().text().replace(/\s+/g, " ").trim() || $2(".anc-info-head .pos", el).first().text().replace(/\s+/g, " ").trim();
+    if (!posLabel) {
+      return;
+    }
+    const cnMeanings = [];
+    const lines = [];
     let looseLines = null;
     const flushLoose = () => {
       if (looseLines && looseLines.length) {
-        additions.push({ name: "", value: looseLines.join("\n").replace(/\n+$/, "") });
+        lines.push(...looseLines);
+        if (looseLines[looseLines.length - 1] !== "") {
+          lines.push("");
+        }
       }
       looseLines = null;
     };
     const groupLines = (blocks) => {
-      const lines = [];
+      const result = [];
       blocks.each((_2, blockEl) => {
         const phraseTitle = $2(blockEl).parents(".phrase-block").find(".phrase-title").first().text().replace(/\s+/g, " ").trim();
         const lv = $2(".def-info .epp-xref", blockEl).text().replace(/\s+/g, " ").trim();
@@ -17985,19 +17989,18 @@ var main = (file, completion) => {
         const en = $2(".ddef_d", blockEl).text().replace(/\s+/g, " ").trim().replace(/\s*:$/, "");
         const cn = $2(".def-body", blockEl).children(".trans").first().text().replace(/\s+/g, " ").trim();
         if (phraseTitle) {
-          lines.push(`(${phraseTitle})`);
+          result.push(`(${phraseTitle})`);
         }
         if (segLine) {
-          lines.push(lab ? `${segLine} ${lab}` : segLine);
+          result.push(lab ? `${segLine} ${lab}` : segLine);
         } else if (lab) {
-          lines.push(`(${lab})`);
+          result.push(`(${lab})`);
         }
-        lines.push(en);
+        result.push(en);
         if (cn) {
-          if (phraseTitle) {
-            lines.push(`> ${cn}`);
-          } else {
-            cnWords.push(cn);
+          result.push(`> ${cn}`);
+          if (!phraseTitle) {
+            cnMeanings.push(cn);
           }
         }
         let exampleCnt = 0;
@@ -18007,33 +18010,26 @@ var main = (file, completion) => {
           }
           const enExample = $2(".eg", exEl).text().replace(/\s+/g, " ").trim();
           const cnExample = $2(".trans", exEl).first().text().replace(/\s+/g, " ").trim();
-          lines.push(cnExample ? `\u2022 ${enExample}  ${cnExample}` : `\u2022 ${enExample}`);
+          result.push(cnExample ? `\u2022 ${enExample}  ${cnExample}` : `\u2022 ${enExample}`);
           exampleCnt++;
         });
         if (isPlain) {
-          lines.push("");
+          result.push("");
         }
       });
-      return lines;
+      return result;
     };
     const handleSense = (senseEl) => {
       const blocks = $2(".def-block", senseEl);
       if (!blocks.length) {
         return;
       }
-      const h3 = $2(".dsense_h", senseEl).text().replace(/\s+/g, " ").trim();
-      const lines = groupLines(blocks);
-      if (!lines.length) {
+      const blockLines = groupLines(blocks);
+      if (!blockLines.length) {
         return;
       }
-      if (h3) {
-        flushLoose();
-        additions.push({ name: h3, value: lines.join("\n").replace(/\n+$/, "") });
-      } else {
-        (looseLines ??= []).push(...lines);
-      }
+      (looseLines ??= []).push(...blockLines);
     };
-    const posStart = additions.length;
     const xrefSeq = { \u4E60\u8BED: 0, \u77ED\u8BED\u52A8\u8BCD: 0 };
     const circle = ["\u2460", "\u2461", "\u2462", "\u2463", "\u2464", "\u2465", "\u2466", "\u2467", "\u2468", "\u2469", "\u246A", "\u246B", "\u246C", "\u246D", "\u246E", "\u246F", "\u2470", "\u2471", "\u2472", "\u2473"];
     const numbered = (name, items2) => {
@@ -18061,17 +18057,13 @@ var main = (file, completion) => {
           }
           const name = isPhrasal ? "\u77ED\u8BED\u52A8\u8BCD" : "\u4E60\u8BED";
           const rows = numbered(name, items2);
-          const prev2 = [...additions].slice(posStart).reverse().find((a) => a.name === name);
-          if (prev2) {
-            prev2.value += "\n" + rows;
-          } else {
-            flushLoose();
-            additions.push({ name, value: rows });
-          }
+          flushLoose();
+          lines.push(name);
+          lines.push(rows);
+          lines.push("");
         }
       });
     };
-    const cnWords = [];
     const posBody = $2(".pos-body", el).first();
     if (posBody.length) {
       collect(posBody);
@@ -18087,12 +18079,33 @@ var main = (file, completion) => {
       }
     }
     flushLoose();
-    if (cnWords.length) {
-      cnGroups.push({ name: posTitle, items: [...new Set(cnWords)] });
-    }
+    posData.push({ posLabel, cnMeanings: [...new Set(cnMeanings)], lines });
   });
-  const cnGroupsFront = cnGroups.flatMap((g) => [{ name: g.name, value: g.items.join("\n") }]);
-  additions.unshift(...cnGroupsFront);
+  const additions = [];
+  if (posData.length > 0) {
+    const headLines = [];
+    if (inflectionLine) {
+      headLines.push(inflectionLine);
+    }
+    const summaryLines = posData.filter((p) => p.cnMeanings.length > 0).map((p) => `**${p.posLabel}**.  ${p.cnMeanings.join("\uFF1B")}`);
+    if (summaryLines.length > 0) {
+      if (headLines.length) {
+        headLines.push("");
+      }
+      headLines.push(...summaryLines);
+    }
+    if (headLines.length) {
+      additions.push({ name: "", value: headLines.join("\n") + "\n" });
+    }
+    additions.push({ name: "", value: SEPARATOR });
+    posData.forEach((p, i) => {
+      if (i > 0) {
+        additions.push({ name: "", value: SEPARATOR });
+      }
+      const value = p.lines.join("\n").replace(/\n+$/, "");
+      additions.push({ name: p.posLabel, value });
+    });
+  }
   const res = {
     from: "en",
     to: "zh-Hans",
@@ -18102,7 +18115,7 @@ var main = (file, completion) => {
     toDict: {
       phonetics,
       additions,
-      exchanges,
+      exchanges: [],
       word
     },
     raw: "",
