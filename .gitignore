@@ -101,3 +101,6 @@ typings/
 
 # TernJS port file
 .tern-port
+
+# 构建产物不入库（含敏感字符串的打包文件）
+dist/
